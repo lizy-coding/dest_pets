@@ -6,7 +6,7 @@ Instructions for AI agents working on this project. Follow these conventions to 
 
 ## Overview
 
-**desktop_pet** is a Flutter cross-platform desktop pet (desktop mascot) PoC. Current focus: macOS transparent borderless window with frame-animated PNG character. The pet floats on top of all windows, is draggable, and remembers its last screen position.
+**desktop_pet** is a Flutter cross-platform desktop pet (desktop mascot) PoC. Current focus: macOS transparent borderless window with a Codex pet package atlas. The pet floats on top of all windows, is draggable, can switch local custom pet packages, and remembers its last screen position.
 
 - **Tech stack**: Flutter (Dart SDK ^3.11.5), Material 3, `window_manager`, `screen_retriever`, `shared_preferences`
 - **Primary platform**: macOS (Android/iOS directories exist for future expansion)
@@ -25,15 +25,19 @@ lib/
 │   ├── desktop_window_controller.dart   Cross-platform window abstraction
 │   └── macos_window_bootstrap.dart      macOS-specific window setup
 ├── pet/
-│   ├── pet_scene.dart                  Scene: Scaffold + layout
-│   ├── pet_actor.dart                  Frame-animated pet renderer
-│   ├── pet_animation_controller.dart   AnimationController wrapper
+│   ├── pet_scene.dart                  Scene: Scaffold + layout + pet picker
+│   ├── pet_actor.dart                  Atlas-animated pet renderer
+│   ├── pet_animation_controller.dart   Variable-duration frame controller
+│   ├── pet_atlas.dart                  Codex pet atlas constants
+│   ├── pet_package.dart                Pet package model
+│   ├── pet_package_repository.dart     Bundled/local pet discovery
 │   └── pet_hit_area.dart               Drag-to-move GestureDetector
 └── settings/
-    └── pet_settings.dart               Position persistence (SharedPreferences)
+    └── pet_settings.dart               Position + pet selection persistence
 
 assets/pets/default/
-├── idle_0.png  through  idle_3.png     Idle animation frames
+├── pet.json                            Bundled default manifest
+└── spritesheet.webp                    Bundled default atlas
 
 test/
 └── widget_test.dart                    Widget-level render test
@@ -58,16 +62,16 @@ test/
 
 ### General
 
-- **No comments** unless strictly necessary. Code should be self-documenting.
+- Avoid comments unless they explain non-obvious behavior, platform constraints, or deliberate error tolerance.
 - Use `final` over `var`/`const` for local variables when possible.
-- All imports use relative paths (package-style imports are not used in lib/).
+- Use relative imports inside `lib/`. Tests may use package imports.
 - File names: `snake_case.dart`. Class names: `PascalCase`.
 - Follow `flutter_lints` rules. Run `flutter analyze` before committing.
 
 ### Architecture
 
 - **Dependency injection via constructor pass-through** — no DI framework. Controllers are created in `main()` and passed down the widget tree manually.
-- **Stateless scene composition** — `PetScene` is `StatelessWidget`; all mutable state lives in child widgets (`PetActor`, `PetHitArea`).
+- **Scene-owned pet selection** — `PetScene` owns current pet package state and persists selection through `PetSettings`.
 - **Platform abstraction** — `DesktopWindowController` is the single entry point for window operations. Platform-specific code (e.g., `MacosWindowBootstrap`) is called only when `Platform.isMacOS` is true.
 - **Guard native calls** — always check `supportsNativeWindowControl` before calling `window_manager` methods. This ensures the code doesn't crash on web or mobile:
   ```dart
@@ -83,20 +87,23 @@ test/
 
 ### Animation
 
-- `PetAnimationController` wraps Flutter's `AnimationController`. Always use this wrapper for pet animations — not `AnimationController` directly.
-- Frame count is injected at construction. Frame indices are computed as `(value * frameCount).floor().clamp(0, frameCount - 1)`.
+- `PetAnimationController` owns pet frame timing. Use it for pet animations instead of open-coded timers or `AnimationController` instances.
+- Frame durations come from the Codex pet atlas contract. The idle row uses `280, 110, 110, 140, 140, 320 ms`.
 - Use `AnimatedBuilder` listening to `_animation.listenable` for frame-driven rebuilds.
-- Animation state lifecycle: `initState` creates + starts, `didUpdateWidget` recreates if frame count changes, `dispose` cleans up.
+- Animation state lifecycle: `initState` creates + starts, `didUpdateWidget` recreates when the selected pet changes, `dispose` cleans up.
 
 ### Assets
 
-- Pet animation frames live under `assets/pets/<pet_name>/` with naming convention `<animation_name>_<frame_index>.png`.
-- Declare new asset directories in `pubspec.yaml` under the `flutter.assets` section.
-- Use directory-level asset declarations (e.g., `assets/pets/default/`) rather than individual file declarations.
+- Bundled pet assets use the Codex pet package shape: `pet.json` plus `spritesheet.webp`.
+- The atlas is `1536x1872`, 8 columns x 9 rows, with `192x208` cells.
+- Local custom pets are discovered from `${CODEX_HOME:-$HOME/.codex}/pets/<pet-id>/`.
+- Declare bundled asset directories in `pubspec.yaml` under `flutter.assets`; keep directory-level declarations such as `assets/pets/default/`.
+- Do not reintroduce loose `idle_*.png` frame assets unless the rendering model is deliberately changed back.
 
 ### Persistence
 
 - Use `PetSettings` for window position. Do not call `SharedPreferences` directly.
+- Use `PetSettings` for selected pet persistence. Do not call `SharedPreferences` directly from UI or pet package code.
 - Key naming convention: `desktop_pet.<domain>.<key>` (e.g., `desktop_pet.window.x`).
 - Operations are async; callers must `await`.
 
@@ -105,6 +112,7 @@ test/
 - All backgrounds must be `Colors.transparent` (scaffold, canvas, colored boxes).
 - Use `RepaintBoundary` around the pet area to optimize rendering.
 - `HitTestBehavior.translucent` for gesture detection areas (the pet is transparent so opaque hit tests won't fire).
+- Right-click / secondary tap opens the pet package picker. Keep this lightweight and usable inside a 200x200 transparent window.
 
 ---
 
@@ -112,16 +120,16 @@ test/
 
 - Tests live in `test/`. File naming: `<feature>_test.dart`.
 - Widget tests use `tester.pumpWidget()` followed by `tester.pump()` for the first frame.
-- Mock `DesktopWindowController` or disable native control guards for test environments (the current test creates a real controller but `supportsNativeWindowControl` returns false during non-desktop test runs).
+- Mock or guard native window behavior so tests do not trigger real desktop window side effects.
 - Always `dispose()` controllers after tests to avoid resource leaks.
 
 ---
 
 ## Adding a New Feature
 
-1. Create a new directory under `lib/<feature>/`.
+1. Prefer existing modules first; create `lib/<feature>/` only for a genuinely new domain.
 2. If the feature needs a new dependency, add it to `pubspec.yaml` and run `flutter pub get`.
-3. If the feature adds assets, declare the directory in `pubspec.yaml` under `flutter.assets`.
+3. If the feature adds bundled assets, declare the directory in `pubspec.yaml` under `flutter.assets`.
 4. Wire the feature into the widget tree from `PetScene` or `main.dart`.
 5. Write a widget test in `test/`.
 6. Run `flutter analyze` and `flutter test` to verify.

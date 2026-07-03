@@ -11,5 +11,5 @@ Future<void> main() async {
   final windowController = DesktopWindowController(settings: settings);
   await windowController.initialize();
 
-  runApp(PetApp(windowController: windowController));
+  runApp(PetApp(windowController: windowController, settings: settings));
 }

@@ -1,33 +1,42 @@
-import 'package:flutter/animation.dart';
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 class PetAnimationController {
-  PetAnimationController({
-    required TickerProvider vsync,
-    required this.frameCount,
-    this.duration = const Duration(milliseconds: 720),
-  }) : _controller = AnimationController(vsync: vsync, duration: duration);
+  PetAnimationController({required List<Duration> frameDurations})
+    : frameDurations = List.unmodifiable(frameDurations),
+      _currentFrame = ValueNotifier<int>(0);
 
-  final int frameCount;
-  final Duration duration;
-  final AnimationController _controller;
+  final List<Duration> frameDurations;
+  final ValueNotifier<int> _currentFrame;
+  Timer? _timer;
 
-  Listenable get listenable => _controller;
+  int get frameCount => frameDurations.length;
+
+  Listenable get listenable => _currentFrame;
 
   int get currentFrame {
-    if (frameCount <= 1) {
-      return 0;
-    }
-
-    final frame = (_controller.value * frameCount).floor();
-    return frame.clamp(0, frameCount - 1).toInt();
+    return _currentFrame.value;
   }
 
   void startIdleLoop() {
-    _controller.repeat();
+    if (frameCount <= 1) {
+      return;
+    }
+
+    _scheduleNextFrame();
   }
 
   void dispose() {
-    _controller.dispose();
+    _timer?.cancel();
+    _currentFrame.dispose();
+  }
+
+  void _scheduleNextFrame() {
+    _timer?.cancel();
+    _timer = Timer(frameDurations[_currentFrame.value], () {
+      _currentFrame.value = (_currentFrame.value + 1) % frameCount;
+      _scheduleNextFrame();
+    });
   }
 }
