@@ -17,7 +17,7 @@ echo "=== desktop_pet DMG packaging ==="
 echo "Version: $VERSION"
 echo ""
 
-echo "[1/4] Running release build..."
+echo "[1/5] Running release build..."
 cd "$PROJECT_DIR"
 flutter build macos --release
 
@@ -28,7 +28,12 @@ fi
 echo "  $APP_PATH"
 
 echo ""
-echo "[2/4] Creating DMG source..."
+echo "[2/5] Signing app with ad-hoc identity..."
+codesign --force --deep --sign - "$APP_PATH"
+echo "  signed"
+
+echo ""
+echo "[3/5] Creating DMG source..."
 
 DMG_ROOT=$(mktemp -d /tmp/dmg_root.XXXXXX)
 trap 'rm -rf "$DMG_ROOT"' EXIT
@@ -39,7 +44,7 @@ ln -s /Applications "$DMG_ROOT/Applications"
 echo "  source ready: $DMG_ROOT"
 
 echo ""
-echo "[3/4] Building DMG..."
+echo "[4/5] Building DMG..."
 
 mkdir -p "$DIST_DIR"
 rm -f "$DMG_PATH"
@@ -53,7 +58,7 @@ hdiutil create \
   "$DMG_PATH"
 
 echo ""
-echo "[4/4] Done."
+echo "[5/5] Done."
 echo ""
 echo "  DMG: $DMG_PATH"
 echo ""

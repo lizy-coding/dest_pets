@@ -25,7 +25,7 @@ Release state: first macOS internal alpha. Core behavior has passed automated ch
 
 - The right-click menu is visually rough.
 - Clicking outside the right-click menu may not reliably dismiss it in the current transparent desktop window.
-- The app is unsigned and not notarized. Users must right-click Open on first launch.
+- The app is ad-hoc signed but not notarized. Users must right-click Open on first launch.
 - macOS is the only validated platform for this release.
 
 ## Requirements
@@ -68,8 +68,9 @@ Output: `dist/Desktop Pet-<version>.dmg`
 
 1. Double-click the DMG to mount it.
 2. Drag `Desktop Pet` into the `Applications` folder.
-3. For the first launch, right-click the app in Applications and select **Open** (required because the app is currently unsigned).
-4. Subsequent launches work with a normal double-click.
+3. For the first launch, right-click the app in Applications and select **Open** (required because the app is not notarized).
+4. The first right-click Open will show a Gatekeeper dialog — click **Open** to proceed.
+5. Subsequent launches work with a normal double-click.
 
 ## Verify
 
