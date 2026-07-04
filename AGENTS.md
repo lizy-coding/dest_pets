@@ -70,14 +70,16 @@ Do not use older names from pre-v0.1 code. In particular, do not recreate `PetPa
 | Release build | `flutter build macos --release` |
 | Get deps | `flutter pub get` |
 | Upgrade deps | `flutter pub upgrade --major-versions` |
+| Package DMG | `bash scripts/package_dmg.sh` |
 
-Before release-oriented changes, run:
+Before release-oriented changes, run the verification commands then the packaging script:
 
 ```sh
 dart format lib test
 flutter analyze
 flutter test
 flutter build macos --release
+bash scripts/package_dmg.sh
 ```
 
 ---
@@ -242,11 +244,18 @@ Keep these files synchronized for release work:
 - `RELEASE.md`
 - `README.md`
 - `macos/Runner/Configs/AppInfo.xcconfig`
+- `scripts/package_dmg.sh`
 
 The current unsigned artifact path is:
 
 ```text
 build/macos/Build/Products/Release/Desktop Pet.app
+```
+
+The packaged DMG output path is:
+
+```text
+dist/Desktop Pet-<version>.dmg
 ```
 
 ---

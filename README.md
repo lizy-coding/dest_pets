@@ -25,7 +25,7 @@ Release state: first macOS internal alpha. Core behavior has passed automated ch
 
 - The right-click menu is visually rough.
 - Clicking outside the right-click menu may not reliably dismiss it in the current transparent desktop window.
-- No app icon, code signing, notarization, or installer packaging is included yet.
+- The app is unsigned and not notarized. Users must right-click Open on first launch.
 - macOS is the only validated platform for this release.
 
 ## Requirements
@@ -55,6 +55,21 @@ Release build:
 flutter build macos --release
 open "build/macos/Build/Products/Release/Desktop Pet.app"
 ```
+
+Build and package DMG for distribution:
+
+```sh
+bash scripts/package_dmg.sh
+```
+
+Output: `dist/Desktop Pet-<version>.dmg`
+
+### Install from DMG
+
+1. Double-click the DMG to mount it.
+2. Drag `Desktop Pet` into the `Applications` folder.
+3. For the first launch, right-click the app in Applications and select **Open** (required because the app is currently unsigned).
+4. Subsequent launches work with a normal double-click.
 
 ## Verify
 
