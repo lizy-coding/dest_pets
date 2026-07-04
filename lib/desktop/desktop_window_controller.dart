@@ -1,18 +1,17 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../settings/pet_settings.dart';
+import '../settings/settings_store.dart';
 import 'macos_window_bootstrap.dart';
 
 class DesktopWindowController with WindowListener {
-  DesktopWindowController({required PetSettings settings})
-    : _settings = settings;
+  DesktopWindowController({required SettingsStore settingsStore})
+    : _settingsStore = settingsStore;
 
-  final PetSettings _settings;
-  Timer? _persistDebounce;
+  final SettingsStore _settingsStore;
   bool _initialized = false;
 
   bool get supportsNativeWindowControl =>
@@ -24,7 +23,7 @@ class DesktopWindowController with WindowListener {
     }
 
     if (Platform.isMacOS) {
-      await MacosWindowBootstrap(settings: _settings).initialize();
+      await MacosWindowBootstrap(settingsStore: _settingsStore).initialize();
     }
 
     windowManager.addListener(this);
@@ -39,6 +38,22 @@ class DesktopWindowController with WindowListener {
     await windowManager.startDragging();
   }
 
+  Future<Offset?> getPosition() async {
+    if (!_initialized || !supportsNativeWindowControl) {
+      return null;
+    }
+
+    return windowManager.getPosition();
+  }
+
+  Future<void> setAlwaysOnTop(bool value) async {
+    if (!_initialized || !supportsNativeWindowControl) {
+      return;
+    }
+
+    await windowManager.setAlwaysOnTop(value);
+  }
+
   Future<void> close() async {
     if (!_initialized || !supportsNativeWindowControl) {
       return;
@@ -48,24 +63,9 @@ class DesktopWindowController with WindowListener {
   }
 
   @override
-  void onWindowMoved() {
-    _persistDebounce?.cancel();
-    _persistDebounce = Timer(const Duration(milliseconds: 250), () {
-      unawaited(_persistCurrentPosition());
-    });
-  }
-
-  Future<void> _persistCurrentPosition() async {
-    try {
-      final position = await windowManager.getPosition();
-      await _settings.saveWindowPosition(position);
-    } catch (_) {
-      // Window position persistence is best-effort during early desktop PoC work.
-    }
-  }
+  void onWindowMoved() {}
 
   void dispose() {
-    _persistDebounce?.cancel();
     if (_initialized && supportsNativeWindowControl) {
       windowManager.removeListener(this);
     }

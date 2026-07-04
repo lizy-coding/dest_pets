@@ -11,15 +11,19 @@ class PetAnimationController {
   final ValueNotifier<int> _currentFrame;
   Timer? _timer;
 
-  int get frameCount => frameDurations.length;
+  int get frameCount {
+    return frameDurations.length;
+  }
 
-  Listenable get listenable => _currentFrame;
+  Listenable get listenable {
+    return _currentFrame;
+  }
 
   int get currentFrame {
     return _currentFrame.value;
   }
 
-  void startIdleLoop() {
+  void startLoop() {
     if (frameCount <= 1) {
       return;
     }

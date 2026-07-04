@@ -1,24 +1,25 @@
 import 'package:flutter/material.dart';
 
-import '../desktop/desktop_window_controller.dart';
-
 class PetHitArea extends StatelessWidget {
   const PetHitArea({
-    required this.windowController,
     required this.child,
+    this.onPanStart,
+    this.onPanEnd,
     this.onSecondaryTapDown,
     super.key,
   });
 
-  final DesktopWindowController windowController;
   final Widget child;
+  final GestureDragStartCallback? onPanStart;
+  final GestureDragEndCallback? onPanEnd;
   final GestureTapDownCallback? onSecondaryTapDown;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
-      onPanStart: (_) => windowController.startDragging(),
+      onPanStart: onPanStart,
+      onPanEnd: onPanEnd,
       onSecondaryTapDown: onSecondaryTapDown,
       child: child,
     );

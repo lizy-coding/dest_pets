@@ -2,26 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../settings/pet_settings.dart';
+import '../settings/settings_store.dart';
 
 class MacosWindowBootstrap {
-  MacosWindowBootstrap({required PetSettings settings}) : _settings = settings;
+  MacosWindowBootstrap({required SettingsStore settingsStore})
+    : _settingsStore = settingsStore;
 
   static const Size windowSize = Size(200, 200);
   static const String windowTitle = 'Desktop Pet';
   static const double _screenMargin = 32;
 
-  final PetSettings _settings;
+  final SettingsStore _settingsStore;
 
   Future<void> initialize() async {
     await windowManager.ensureInitialized();
 
-    final savedPosition = await _settings.loadWindowPosition();
-    const options = WindowOptions(
+    final config = await _settingsStore.loadConfig();
+    final options = WindowOptions(
       size: windowSize,
       minimumSize: windowSize,
       maximumSize: windowSize,
-      alwaysOnTop: true,
+      alwaysOnTop: config?.alwaysOnTop ?? true,
       backgroundColor: Colors.transparent,
       skipTaskbar: false,
       title: windowTitle,
@@ -36,7 +37,9 @@ class MacosWindowBootstrap {
     await windowManager.setHasShadow(false);
     await windowManager.setBackgroundColor(Colors.transparent);
     await windowManager.setVisibleOnAllWorkspaces(true);
-    await windowManager.setPosition(savedPosition ?? await _defaultPosition());
+    await windowManager.setPosition(
+      config?.windowPosition ?? await _defaultPosition(),
+    );
     await windowManager.show(inactive: true);
   }
 
