@@ -1,0 +1,56 @@
+# Release Notes
+
+## v0.1.0
+
+Date: 2026-07-04
+
+Type: first macOS internal alpha.
+
+### Scope
+
+This release establishes the first usable desktop pet build:
+
+- Shows the bundled default pet in a transparent macOS window.
+- Supports drag-to-move and remembers window position.
+- Supports local pet resource discovery and switching.
+- Supports size increase, decrease, and reset from the right-click menu.
+- Persists config through the current-version `SettingsStore` keys.
+
+### Manual Smoke Test
+
+Passed:
+
+- App launches on macOS.
+- Default pet displays.
+- Window is transparent, borderless, draggable, and always on top.
+- Pet size changes from the right-click menu.
+- Selected size and window position persist after restart.
+- Core local resource switching path works.
+
+Known issue:
+
+- The right-click menu view is rough and does not reliably dismiss when clicking outside it.
+
+### Verification Commands
+
+Run before publishing artifacts:
+
+```sh
+dart format lib test
+flutter analyze
+flutter test
+flutter build macos --debug
+flutter build macos --release
+```
+
+### Artifact
+
+Expected release artifact after the release build:
+
+```text
+build/macos/Build/Products/Release/Desktop Pet.app
+```
+
+### Publishing Notes
+
+This release is not signed or notarized. Distribute only as an internal macOS alpha unless signing and notarization are completed.
