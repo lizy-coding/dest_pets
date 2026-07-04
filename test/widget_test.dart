@@ -1,41 +1,38 @@
-import 'package:desktop_pet/app/pet_app.dart';
+import 'package:desktop_pet/app/app.dart';
 import 'package:desktop_pet/desktop/desktop_window_controller.dart';
-import 'package:desktop_pet/pet/pet_actor.dart';
-import 'package:desktop_pet/pet/pet_package.dart';
-import 'package:desktop_pet/pet/pet_package_repository.dart';
-import 'package:desktop_pet/settings/pet_settings.dart';
+import 'package:desktop_pet/pet/view/pet_actor.dart';
+import 'package:desktop_pet/resources/data/pet_resource_repository.dart';
+import 'package:desktop_pet/resources/model/pet_manifest.dart';
+import 'package:desktop_pet/resources/model/pet_resource.dart';
+import 'package:desktop_pet/settings/settings_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class FakePetPackageRepository extends PetPackageRepository {
-  FakePetPackageRepository(this.pets) : super(localPetsDirectory: '');
+class FakePetResourceRepository extends PetResourceRepository {
+  FakePetResourceRepository(this.resources) : super(localPetsDirectory: '');
 
-  final List<PetPackage> pets;
+  final List<PetResource> resources;
 
   @override
-  Future<List<PetPackage>> loadAvailablePets() async {
-    return pets;
+  Future<List<PetResource>> loadAvailableResources() async {
+    return resources;
   }
 }
 
 void main() {
-  testWidgets('renders the desktop pet scene', (tester) async {
+  testWidgets('renders the desktop pet view', (tester) async {
     SharedPreferences.setMockInitialValues({});
-    final windowController = DesktopWindowController(settings: PetSettings());
-    final pet = PetPackage(
-      source: PetPackageSource.bundled,
-      basePath: PetPackageRepository.defaultBundledBasePath,
-      id: 'mq',
-      displayName: 'MQ',
-      description: 'A calm gray amber-eyed companion cat.',
-      spritesheetPath: 'spritesheet.webp',
+    final settingsStore = SettingsStore();
+    final windowController = DesktopWindowController(
+      settingsStore: settingsStore,
     );
+    final pet = _resource();
 
     await tester.pumpWidget(
-      PetApp(
+      App(
         windowController: windowController,
-        settings: PetSettings(),
-        petPackageRepository: FakePetPackageRepository([pet]),
+        settingsStore: settingsStore,
+        resourceRepository: FakePetResourceRepository([pet]),
       ),
     );
     await tester.pumpAndSettle();
@@ -44,4 +41,34 @@ void main() {
 
     windowController.dispose();
   });
+}
+
+PetResource _resource() {
+  final manifest = PetManifest.fromJson({
+    'id': 'default_pet',
+    'name': 'Default Pet',
+    'description': 'A test pet.',
+    'defaultScale': 1.0,
+    'atlas': {
+      'image': 'spritesheet.webp',
+      'columns': 8,
+      'rows': 9,
+      'frameWidth': 192,
+      'frameHeight': 208,
+    },
+    'animations': {
+      'idle': {
+        'row': 0,
+        'frames': [0, 1, 2, 3, 4, 5],
+        'durationsMs': [280, 110, 110, 140, 140, 320],
+        'loop': true,
+      },
+    },
+  })!;
+
+  return PetResource(
+    source: PetResourceSource.bundled,
+    basePath: PetResourceRepository.defaultBundledBasePath,
+    manifest: manifest,
+  );
 }

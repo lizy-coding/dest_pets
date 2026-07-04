@@ -1,70 +1,83 @@
 import 'package:desktop_pet/desktop/desktop_window_controller.dart';
-import 'package:desktop_pet/pet/controller/pet_appearance_controller.dart';
-import 'package:desktop_pet/pet/data/pet_resource_repository.dart';
-import 'package:desktop_pet/pet/data/pet_settings_store.dart';
-import 'package:desktop_pet/pet/model/pet_appearance_settings.dart';
-import 'package:desktop_pet/pet/model/pet_resource.dart';
-import 'package:desktop_pet/pet/pet_actor.dart';
-import 'package:desktop_pet/pet/pet_hit_area.dart';
+import 'package:desktop_pet/pet/controller/pet_controller.dart';
+import 'package:desktop_pet/pet/model/pet_config.dart';
+import 'package:desktop_pet/pet/model/pet_state.dart';
+import 'package:desktop_pet/pet/view/pet_actor.dart';
+import 'package:desktop_pet/pet/view/pet_hit_area.dart';
 import 'package:desktop_pet/pet/view/pet_view.dart';
-import 'package:desktop_pet/settings/pet_settings.dart';
+import 'package:desktop_pet/resources/data/pet_resource_repository.dart';
+import 'package:desktop_pet/resources/model/pet_manifest.dart';
+import 'package:desktop_pet/resources/model/pet_resource.dart';
+import 'package:desktop_pet/settings/settings_store.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-class FakePetResourceRepository extends PetResourceRepository {
-  FakePetResourceRepository(this.resources) : super(localPetsDirectory: '');
+class FakePetController extends PetController {
+  FakePetController(this.testState)
+    : super(
+        resourceRepository: PetResourceRepository(localPetsDirectory: ''),
+        settingsStore: SettingsStore(),
+      );
 
-  final List<PetResource> resources;
+  PetState testState;
+  String? switchedPetId;
+  int increaseCalls = 0;
+  int decreaseCalls = 0;
+  int resetCalls = 0;
 
   @override
-  Future<List<PetResource>> loadAvailableResources() async {
-    return resources;
+  PetState get state {
+    return testState;
   }
-}
-
-class FakePetSettingsStore extends PetSettingsStore {
-  PetAppearanceSettings? settings;
 
   @override
-  Future<PetAppearanceSettings?> loadAppearanceSettings() async {
-    return settings;
+  Future<void> switchPet(String petId) async {
+    switchedPetId = petId;
   }
 
   @override
-  Future<void> saveAppearanceSettings(PetAppearanceSettings settings) async {
-    this.settings = settings;
+  Future<void> increaseScale() async {
+    increaseCalls += 1;
+  }
+
+  @override
+  Future<void> decreaseScale() async {
+    decreaseCalls += 1;
+  }
+
+  @override
+  Future<void> resetScale() async {
+    resetCalls += 1;
   }
 }
 
 void main() {
-  final bundledResource = PetResource(
+  final bundledResource = _resource(
     source: PetResourceSource.bundled,
-    basePath: PetResourceRepository.defaultBundledBasePath,
-    id: 'mq',
-    displayName: 'MQ',
-    description: 'A calm gray amber-eyed companion cat.',
-    spritesheetPath: 'spritesheet.webp',
+    id: 'default_pet',
+    name: 'Default Pet',
   );
-  final localResource = PetResource(
+  final localResource = _resource(
     source: PetResourceSource.local,
-    basePath: '/tmp/local_pet',
-    id: 'local',
-    displayName: 'Local Pet',
-    description: 'A local pet.',
-    spritesheetPath: 'spritesheet.webp',
+    id: 'local_pet',
+    name: 'Local Pet',
   );
 
-  testWidgets('renders the current resource', (tester) async {
-    final controller = PetAppearanceController(
-      resourceRepository: FakePetResourceRepository([bundledResource]),
-      settingsStore: FakePetSettingsStore(),
+  testWidgets('renders current resource with config scale', (tester) async {
+    final controller = FakePetController(
+      PetState(
+        config: const PetConfig(scale: 1.5),
+        resource: bundledResource,
+        availableResources: [bundledResource],
+      ),
     );
     addTearDown(controller.dispose);
-    await controller.load();
 
-    final windowController = DesktopWindowController(settings: PetSettings());
+    final windowController = DesktopWindowController(
+      settingsStore: SettingsStore(),
+    );
     addTearDown(windowController.dispose);
 
     await tester.pumpWidget(
@@ -76,52 +89,27 @@ void main() {
     await tester.pump();
 
     expect(find.byType(PetActor), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is Transform && widget.transform.storage[0] == 1.5,
+      ),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('right click menu shows available resources', (tester) async {
-    final controller = PetAppearanceController(
-      resourceRepository: FakePetResourceRepository([
-        bundledResource,
-        localResource,
-      ]),
-      settingsStore: FakePetSettingsStore(),
-    );
-    addTearDown(controller.dispose);
-    await controller.load();
-
-    final windowController = DesktopWindowController(settings: PetSettings());
-    addTearDown(windowController.dispose);
-
-    await tester.pumpWidget(
-      _PetViewHarness(
-        controller: controller,
-        windowController: windowController,
+  testWidgets('right click menu switches resources', (tester) async {
+    final controller = FakePetController(
+      PetState(
+        config: const PetConfig(),
+        resource: bundledResource,
+        availableResources: [bundledResource, localResource],
       ),
     );
-
-    await tester.tap(
-      find.byType(PetHitArea),
-      buttons: kSecondaryMouseButton,
-      kind: PointerDeviceKind.mouse,
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('MQ (Default)'), findsOneWidget);
-    expect(find.text('Local Pet'), findsOneWidget);
-  });
-
-  testWidgets('selecting a menu item updates controller state', (tester) async {
-    final controller = PetAppearanceController(
-      resourceRepository: FakePetResourceRepository([
-        bundledResource,
-        localResource,
-      ]),
-      settingsStore: FakePetSettingsStore(),
-    );
     addTearDown(controller.dispose);
-    await controller.load();
 
-    final windowController = DesktopWindowController(settings: PetSettings());
+    final windowController = DesktopWindowController(
+      settingsStore: SettingsStore(),
+    );
     addTearDown(windowController.dispose);
 
     await tester.pumpWidget(
@@ -142,9 +130,55 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(controller.state.selectedResource, localResource);
-    expect(controller.state.currentResourceId, localResource.resourceId);
+    expect(controller.switchedPetId, 'local_pet');
   });
+
+  testWidgets('right click menu dispatches size operations', (tester) async {
+    final controller = FakePetController(
+      PetState(
+        config: const PetConfig(),
+        resource: bundledResource,
+        availableResources: [bundledResource],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    final windowController = DesktopWindowController(
+      settingsStore: SettingsStore(),
+    );
+    addTearDown(windowController.dispose);
+
+    await tester.pumpWidget(
+      _PetViewHarness(
+        controller: controller,
+        windowController: windowController,
+      ),
+    );
+
+    await _openMenu(tester);
+    await tester.tap(find.text('Increase size'));
+    await tester.pumpAndSettle();
+    expect(controller.increaseCalls, 1);
+
+    await _openMenu(tester);
+    await tester.tap(find.text('Decrease size'));
+    await tester.pumpAndSettle();
+    expect(controller.decreaseCalls, 1);
+
+    await _openMenu(tester);
+    await tester.tap(find.text('Reset size'));
+    await tester.pumpAndSettle();
+    expect(controller.resetCalls, 1);
+  });
+}
+
+Future<void> _openMenu(WidgetTester tester) async {
+  await tester.tap(
+    find.byType(PetHitArea),
+    buttons: kSecondaryMouseButton,
+    kind: PointerDeviceKind.mouse,
+  );
+  await tester.pumpAndSettle();
 }
 
 class _PetViewHarness extends StatelessWidget {
@@ -153,14 +187,50 @@ class _PetViewHarness extends StatelessWidget {
     required this.windowController,
   });
 
-  final PetAppearanceController controller;
+  final PetController controller;
   final DesktopWindowController windowController;
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<PetAppearanceController>.value(
+    return ChangeNotifierProvider<PetController>.value(
       value: controller,
       child: MaterialApp(home: PetView(windowController: windowController)),
     );
   }
+}
+
+PetResource _resource({
+  required PetResourceSource source,
+  required String id,
+  required String name,
+}) {
+  final manifest = PetManifest.fromJson({
+    'id': id,
+    'name': name,
+    'description': 'A test pet.',
+    'defaultScale': 1.0,
+    'atlas': {
+      'image': 'spritesheet.webp',
+      'columns': 8,
+      'rows': 9,
+      'frameWidth': 192,
+      'frameHeight': 208,
+    },
+    'animations': {
+      'idle': {
+        'row': 0,
+        'frames': [0, 1, 2, 3, 4, 5],
+        'durationsMs': [280, 110, 110, 140, 140, 320],
+        'loop': true,
+      },
+    },
+  })!;
+
+  return PetResource(
+    source: source,
+    basePath: source == PetResourceSource.bundled
+        ? PetResourceRepository.defaultBundledBasePath
+        : '/tmp/$id',
+    manifest: manifest,
+  );
 }

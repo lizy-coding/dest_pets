@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:desktop_pet/pet/data/pet_resource_repository.dart';
-import 'package:desktop_pet/pet/model/pet_resource.dart';
+import 'package:desktop_pet/resources/data/pet_resource_repository.dart';
+import 'package:desktop_pet/resources/model/pet_resource.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -13,17 +13,17 @@ void main() {
     final resource = await repository.loadBundledResource();
 
     expect(resource.source, PetResourceSource.bundled);
-    expect(resource.id, 'mq');
-    expect(resource.resourceId, 'bundled:mq');
-    expect(resource.displayName, 'MQ');
+    expect(resource.id, 'default_pet');
+    expect(resource.resourceId, 'default_pet');
+    expect(resource.name, 'Default Pet');
     expect(
       resource.resolvedSpritesheetPath,
-      'assets/pets/default/spritesheet.webp',
+      'assets/pets/default_pet/spritesheet.webp',
     );
   });
 
   test(
-    'discovers valid local resources and ignores invalid packages',
+    'discovers valid local resources and ignores invalid resources',
     () async {
       final tempDirectory = await Directory.systemTemp.createTemp(
         'desktop_pet_resource_test_',
@@ -36,14 +36,9 @@ void main() {
 
       final validPetDirectory = Directory('${tempDirectory.path}/valid');
       await validPetDirectory.create();
-      await File('${validPetDirectory.path}/pet.json').writeAsString('''
-{
-  "id": "valid",
-  "displayName": "Valid Pet",
-  "description": "A valid local pet.",
-  "spritesheetPath": "spritesheet.webp"
-}
-''');
+      await File(
+        '${validPetDirectory.path}/pet.json',
+      ).writeAsString(_manifestJson(id: 'valid', name: 'Valid Pet'));
       await File(
         '${validPetDirectory.path}/spritesheet.webp',
       ).writeAsBytes([0]);
@@ -57,29 +52,33 @@ void main() {
         '${tempDirectory.path}/missing_spritesheet',
       );
       await missingSpritesheetDirectory.create();
-      await File('${missingSpritesheetDirectory.path}/pet.json').writeAsString(
-        '''
-{
-  "id": "missing",
-  "displayName": "Missing",
-  "description": "This package is incomplete.",
-  "spritesheetPath": "spritesheet.webp"
-}
-''',
-      );
+      await File(
+        '${missingSpritesheetDirectory.path}/pet.json',
+      ).writeAsString(_manifestJson(id: 'missing', name: 'Missing'));
 
       final unsafePathDirectory = Directory(
         '${tempDirectory.path}/unsafe_path',
       );
       await unsafePathDirectory.create();
-      await File('${unsafePathDirectory.path}/pet.json').writeAsString('''
+      await File('${unsafePathDirectory.path}/pet.json').writeAsString(
+        _manifestJson(
+          id: 'unsafe',
+          name: 'Unsafe',
+          image: '../spritesheet.webp',
+        ),
+      );
+
+      final legacyDirectory = Directory('${tempDirectory.path}/legacy');
+      await legacyDirectory.create();
+      await File('${legacyDirectory.path}/pet.json').writeAsString('''
 {
-  "id": "unsafe",
-  "displayName": "Unsafe",
-  "description": "This package has an unsafe path.",
-  "spritesheetPath": "../spritesheet.webp"
+  "id": "legacy",
+  "displayName": "Legacy",
+  "description": "Old shape.",
+  "spritesheetPath": "spritesheet.webp"
 }
 ''');
+      await File('${legacyDirectory.path}/spritesheet.webp').writeAsBytes([0]);
 
       final repository = PetResourceRepository(
         localPetsDirectory: tempDirectory.path,
@@ -96,17 +95,34 @@ void main() {
       );
     },
   );
+}
 
-  test(
-    'falls back to bundled resource when saved resource is unavailable',
-    () async {
-      final repository = PetResourceRepository(localPetsDirectory: '');
-      final resources = await repository.loadAvailableResources();
-
-      final selected = repository.resolveResource(resources, 'local:missing');
-
-      expect(selected.source, PetResourceSource.bundled);
-      expect(selected.id, 'mq');
-    },
-  );
+String _manifestJson({
+  required String id,
+  required String name,
+  String image = 'spritesheet.webp',
+}) {
+  return '''
+{
+  "id": "$id",
+  "name": "$name",
+  "description": "A test pet.",
+  "defaultScale": 1.0,
+  "atlas": {
+    "image": "$image",
+    "columns": 8,
+    "rows": 9,
+    "frameWidth": 192,
+    "frameHeight": 208
+  },
+  "animations": {
+    "idle": {
+      "row": 0,
+      "frames": [0, 1, 2, 3, 4, 5],
+      "durationsMs": [280, 110, 110, 140, 140, 320],
+      "loop": true
+    }
+  }
+}
+''';
 }
