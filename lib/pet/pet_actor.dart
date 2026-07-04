@@ -5,12 +5,12 @@ import 'package:flutter/material.dart';
 
 import 'pet_atlas.dart';
 import 'pet_animation_controller.dart';
-import 'pet_package.dart';
+import 'model/pet_resource.dart';
 
 class PetActor extends StatefulWidget {
   const PetActor({required this.pet, super.key});
 
-  final PetPackage pet;
+  final PetResource pet;
 
   @override
   State<PetActor> createState() => _PetActorState();
@@ -28,7 +28,7 @@ class _PetActorState extends State<PetActor> {
   @override
   void didUpdateWidget(PetActor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.pet.selection != widget.pet.selection) {
+    if (oldWidget.pet.resourceId != widget.pet.resourceId) {
       _animation.dispose();
       _animation = _createAnimation();
     }
@@ -67,7 +67,7 @@ class _PetAtlasFrame extends StatefulWidget {
     required this.column,
   });
 
-  final PetPackage pet;
+  final PetResource pet;
   final int row;
   final int column;
 
@@ -164,15 +164,15 @@ class _PetAtlasFrameState extends State<_PetAtlasFrame> {
     imageStream.addListener(listener);
   }
 
-  ImageProvider<Object> _imageProviderFor(PetPackage pet) {
-    if (pet.source == PetPackageSource.bundled) {
+  ImageProvider<Object> _imageProviderFor(PetResource pet) {
+    if (pet.source == PetResourceSource.bundled) {
       return AssetImage(pet.resolvedSpritesheetPath);
     }
 
     return FileImage(File(pet.resolvedSpritesheetPath));
   }
 
-  String _petKey(PetPackage pet) {
+  String _petKey(PetResource pet) {
     return '${pet.source.name}:${pet.resolvedSpritesheetPath}';
   }
 

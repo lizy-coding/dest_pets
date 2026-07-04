@@ -38,7 +38,7 @@ void main() {
         petPackageRepository: FakePetPackageRepository([pet]),
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.byType(PetActor), findsOneWidget);
 
