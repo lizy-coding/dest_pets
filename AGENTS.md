@@ -1,135 +1,262 @@
-# AGENTS.md — desktop_pet
+# AGENTS.md - desktop_pet
 
-Instructions for AI agents working on this project. Follow these conventions to stay consistent with the existing codebase.
+Instructions for AI agents working on this project. Keep changes aligned with the current v0.1 architecture and the evolution plan in `EVOLUTION_PLAN.md`.
 
 ---
 
 ## Overview
 
-**desktop_pet** is a Flutter cross-platform desktop pet (desktop mascot) PoC. Current focus: macOS transparent borderless window with a Codex pet package atlas. The pet floats on top of all windows, is draggable, can switch local custom pet packages, and remembers its last screen position.
+**desktop_pet** is a Flutter macOS desktop pet PoC. It renders a transparent, borderless, always-on-top desktop mascot, plays a Codex atlas animation, supports drag-to-move, can switch local pet resources, and persists current-version user config.
 
-- **Tech stack**: Flutter (Dart SDK ^3.11.5), Material 3, `window_manager`, `screen_retriever`, `shared_preferences`
-- **Primary platform**: macOS (Android/iOS directories exist for future expansion)
-- **Lint**: `flutter_lints` ^6.0.0 (config in `analysis_options.yaml`)
+- **Current release**: `v0.1.0` internal macOS alpha
+- **Tech stack**: Flutter (Dart SDK ^3.11.5), Material 3, `window_manager`, `screen_retriever`, `shared_preferences`, `provider`
+- **Primary platform**: macOS
+- **Lint**: `flutter_lints` ^6.0.0
 
 ---
 
-## Project Structure
+## Current Project Structure
 
-```
+```text
 lib/
-├── main.dart                     Entry: init settings → window → runApp
+├── main.dart
 ├── app/
-│   └── pet_app.dart              MaterialApp root with transparent theme
+│   └── app.dart
 ├── desktop/
-│   ├── desktop_window_controller.dart   Cross-platform window abstraction
-│   └── macos_window_bootstrap.dart      macOS-specific window setup
+│   ├── desktop_window_controller.dart
+│   └── macos_window_bootstrap.dart
 ├── pet/
-│   ├── pet_scene.dart                  Scene: Scaffold + layout + pet picker
-│   ├── pet_actor.dart                  Atlas-animated pet renderer
-│   ├── pet_animation_controller.dart   Variable-duration frame controller
-│   ├── pet_atlas.dart                  Codex pet atlas constants
-│   ├── pet_package.dart                Pet package model
-│   ├── pet_package_repository.dart     Bundled/local pet discovery
-│   └── pet_hit_area.dart               Drag-to-move GestureDetector
+│   ├── animation/
+│   │   ├── pet_animation_controller.dart
+│   │   └── pet_atlas.dart
+│   ├── controller/
+│   │   └── pet_controller.dart
+│   ├── model/
+│   │   ├── pet_animation_state.dart
+│   │   ├── pet_config.dart
+│   │   ├── pet_runtime_mode.dart
+│   │   └── pet_state.dart
+│   └── view/
+│       ├── pet_actor.dart
+│       ├── pet_hit_area.dart
+│       └── pet_view.dart
+├── resources/
+│   ├── data/
+│   │   └── pet_resource_repository.dart
+│   └── model/
+│       ├── pet_animation_manifest.dart
+│       ├── pet_manifest.dart
+│       └── pet_resource.dart
 └── settings/
-    └── pet_settings.dart               Position + pet selection persistence
+    └── settings_store.dart
 
-assets/pets/default/
-├── pet.json                            Bundled default manifest
-└── spritesheet.webp                    Bundled default atlas
-
-test/
-└── widget_test.dart                    Widget-level render test
+assets/pets/default_pet/
+├── pet.json
+└── spritesheet.webp
 ```
+
+Do not use older names from pre-v0.1 code. In particular, do not recreate `PetPackage`, `PetAppearance*`, `PetScene`, or `PetSettings`.
 
 ---
 
 ## Commands
 
-| Task         | Command                      |
-|--------------|------------------------------|
-| Run (macOS)  | `flutter run -d macos`       |
-| Analyze/lint | `flutter analyze`            |
-| Test         | `flutter test`               |
-| Build macOS  | `flutter build macos`        |
-| Get deps     | `flutter pub get`            |
+| Task | Command |
+| --- | --- |
+| Run macOS | `flutter run -d macos` |
+| Analyze/lint | `flutter analyze` |
+| Test | `flutter test` |
+| Debug build | `flutter build macos --debug` |
+| Release build | `flutter build macos --release` |
+| Get deps | `flutter pub get` |
 | Upgrade deps | `flutter pub upgrade --major-versions` |
+
+Before release-oriented changes, run:
+
+```sh
+dart format lib test
+flutter analyze
+flutter test
+flutter build macos --release
+```
 
 ---
 
-## Code Conventions
+## Architecture Rules
 
-### General
+- **Single app root**: `lib/app/app.dart` owns app-level providers and creates `PetController`.
+- **Single runtime entry point**: `PetController` is the only UI-facing controller for pet behavior. UI reads `controller.state` and calls controller methods.
+- **State machine first**: Runtime mode belongs in `PetRuntimeMode`; do not encode mode using nullable resources, ad hoc booleans, or UI-local flags.
+- **Config model**: Persistable user config belongs in `PetConfig`.
+- **Runtime state model**: Render/runtime state belongs in `PetState`.
+- **Resource model**: Resource parsing and validation belongs under `lib/resources/`.
+- **Settings model**: SharedPreferences access belongs only in `SettingsStore`.
+- **Window boundary**: Native window calls belong only in `DesktopWindowController` and `MacosWindowBootstrap`.
+- **Renderer boundary**: `PetActor` renders a `PetResource` plus `PetAnimationState`; it must not know about settings, repositories, or controller methods.
 
-- Avoid comments unless they explain non-obvious behavior, platform constraints, or deliberate error tolerance.
-- Use `final` over `var`/`const` for local variables when possible.
-- Use relative imports inside `lib/`. Tests may use package imports.
-- File names: `snake_case.dart`. Class names: `PascalCase`.
-- Follow `flutter_lints` rules. Run `flutter analyze` before committing.
+Dependency flow should stay:
 
-### Architecture
+```text
+main.dart
+  -> SettingsStore
+  -> DesktopWindowController
+  -> App
+       -> PetResourceRepository
+       -> PetController
+       -> PetView
+            -> PetHitArea
+            -> PetActor
+```
 
-- **Dependency injection via constructor pass-through** — no DI framework. Controllers are created in `main()` and passed down the widget tree manually.
-- **Scene-owned pet selection** — `PetScene` owns current pet package state and persists selection through `PetSettings`.
-- **Platform abstraction** — `DesktopWindowController` is the single entry point for window operations. Platform-specific code (e.g., `MacosWindowBootstrap`) is called only when `Platform.isMacOS` is true.
-- **Guard native calls** — always check `supportsNativeWindowControl` before calling `window_manager` methods. This ensures the code doesn't crash on web or mobile:
-  ```dart
-  bool get supportsNativeWindowControl =>
-      !kIsWeb && (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
-  ```
+---
 
-### Window Management
+## Do Not Reintroduce
 
-- All window configuration goes through `desktop/desktop_window_controller.dart`.
-- macOS-specific window options (size, always-on-top, title bar, shadow, workspaces) belong in `macos_window_bootstrap.dart`.
-- Window position is persisted via `PetSettings` with a **250ms debounce** to avoid excessive writes during drag operations.
+These were deliberately removed during the v0.1 normalization:
 
-### Animation
+- `lib/pet/pet_package.dart`
+- `lib/pet/pet_package_repository.dart`
+- `lib/pet/model/pet_appearance_*`
+- `lib/pet/data/pet_settings_store.dart`
+- `lib/settings/pet_settings.dart`
+- Old SharedPreferences keys such as `desktop_pet.pet.*`, `desktop_pet.window.*`, or `desktop_pet.appearance.*`
+- Old manifest fields such as `displayName` or `spritesheetPath`
+- Loose `idle_*.png` frame assets
+- UI-driven resource fallback logic
+- Direct `SharedPreferences` calls outside `SettingsStore`
 
-- `PetAnimationController` owns pet frame timing. Use it for pet animations instead of open-coded timers or `AnimationController` instances.
-- Frame durations come from the Codex pet atlas contract. The idle row uses `280, 110, 110, 140, 140, 320 ms`.
-- Use `AnimatedBuilder` listening to `_animation.listenable` for frame-driven rebuilds.
-- Animation state lifecycle: `initState` creates + starts, `didUpdateWidget` recreates when the selected pet changes, `dispose` cleans up.
+If a migration is needed in the future, implement it as an explicit versioned migration plan. Do not silently add compatibility to core models.
 
-### Assets
+---
 
-- Bundled pet assets use the Codex pet package shape: `pet.json` plus `spritesheet.webp`.
-- The atlas is `1536x1872`, 8 columns x 9 rows, with `192x208` cells.
-- Local custom pets are discovered from `${CODEX_HOME:-$HOME/.codex}/pets/<pet-id>/`.
-- Declare bundled asset directories in `pubspec.yaml` under `flutter.assets`; keep directory-level declarations such as `assets/pets/default/`.
-- Do not reintroduce loose `idle_*.png` frame assets unless the rendering model is deliberately changed back.
+## Resource Contract
 
-### Persistence
+Bundled resources use:
 
-- Use `PetSettings` for window position. Do not call `SharedPreferences` directly.
-- Use `PetSettings` for selected pet persistence. Do not call `SharedPreferences` directly from UI or pet package code.
-- Key naming convention: `desktop_pet.<domain>.<key>` (e.g., `desktop_pet.window.x`).
-- Operations are async; callers must `await`.
+```text
+assets/pets/default_pet/
+├── pet.json
+└── spritesheet.webp
+```
 
-### UI
+Local resources use:
 
-- All backgrounds must be `Colors.transparent` (scaffold, canvas, colored boxes).
-- Use `RepaintBoundary` around the pet area to optimize rendering.
-- `HitTestBehavior.translucent` for gesture detection areas (the pet is transparent so opaque hit tests won't fire).
-- Right-click / secondary tap opens the pet package picker. Keep this lightweight and usable inside a 200x200 transparent window.
+```text
+${CODEX_HOME:-$HOME/.codex}/pets/<pet-id>/
+├── pet.json
+└── spritesheet.webp
+```
+
+Manifest fields are strict:
+
+```json
+{
+  "id": "default_pet",
+  "name": "Default Pet",
+  "description": "Default desktop pet.",
+  "defaultScale": 1.0,
+  "atlas": {
+    "image": "spritesheet.webp",
+    "columns": 8,
+    "rows": 9,
+    "frameWidth": 192,
+    "frameHeight": 208
+  },
+  "animations": {
+    "idle": {
+      "row": 0,
+      "frames": [0, 1, 2, 3, 4, 5],
+      "durationsMs": [280, 110, 110, 140, 140, 320],
+      "loop": true
+    }
+  }
+}
+```
+
+Repository behavior:
+
+- `PetResourceRepository.loadAvailableResources()` returns only valid resources.
+- The bundled resource is required; invalid bundled manifests should fail initialization.
+- Invalid local resources are ignored.
+- Unsafe relative paths, missing spritesheets, missing atlas data, and missing `idle` animation are invalid.
+
+---
+
+## Persistence
+
+Use only these current-version keys through `SettingsStore`:
+
+```text
+desktop_pet.config.petId
+desktop_pet.config.scale
+desktop_pet.config.window.x
+desktop_pet.config.window.y
+desktop_pet.config.alwaysOnTop
+```
+
+Rules:
+
+- UI and repositories must not call `SharedPreferences` directly.
+- Window position is part of `PetConfig`.
+- Scale clamping belongs in `PetController`.
+- Config operations are async and must be awaited.
+
+---
+
+## UI Rules
+
+- All app/window backgrounds remain `Colors.transparent`.
+- Keep the pet surface stable at the desktop-window size unless deliberately changing window behavior.
+- Use `RepaintBoundary` around the pet render area.
+- Use `HitTestBehavior.translucent` for transparent hit areas.
+- Right-click / secondary tap opens the lightweight pet menu.
+- The right-click menu is a known v0.1 weakness. If you improve it, preserve resource switching and size controls, and add tests for dismissal behavior.
+- Do not add a full settings page unless it is part of a planned milestone in `EVOLUTION_PLAN.md`.
 
 ---
 
 ## Testing
 
-- Tests live in `test/`. File naming: `<feature>_test.dart`.
-- Widget tests use `tester.pumpWidget()` followed by `tester.pump()` for the first frame.
+- Tests live in `test/`.
+- File naming: `<feature>_test.dart`.
+- Widget tests use `tester.pumpWidget()` followed by `tester.pump()` or `tester.pumpAndSettle()` as appropriate.
 - Mock or guard native window behavior so tests do not trigger real desktop window side effects.
-- Always `dispose()` controllers after tests to avoid resource leaks.
+- Always dispose controllers in tests.
+
+Coverage expectations:
+
+- Manifest parser changes need model tests.
+- Repository discovery changes need local valid/invalid resource tests.
+- Settings key changes need `SettingsStore` tests.
+- Runtime mode changes need `PetController` tests.
+- Menu or interaction changes need widget tests.
 
 ---
 
-## Adding a New Feature
+## Release Files
 
-1. Prefer existing modules first; create `lib/<feature>/` only for a genuinely new domain.
-2. If the feature needs a new dependency, add it to `pubspec.yaml` and run `flutter pub get`.
-3. If the feature adds bundled assets, declare the directory in `pubspec.yaml` under `flutter.assets`.
-4. Wire the feature into the widget tree from `PetScene` or `main.dart`.
-5. Write a widget test in `test/`.
-6. Run `flutter analyze` and `flutter test` to verify.
+Keep these files synchronized for release work:
+
+- `pubspec.yaml`
+- `CHANGELOG.md`
+- `RELEASE.md`
+- `README.md`
+- `macos/Runner/Configs/AppInfo.xcconfig`
+
+The current unsigned artifact path is:
+
+```text
+build/macos/Build/Products/Release/Desktop Pet.app
+```
+
+---
+
+## Adding A New Feature
+
+1. Read `EVOLUTION_PLAN.md` and confirm the feature fits the next milestone.
+2. Prefer existing modules before creating a new domain.
+3. Route config through `PetConfig` and `SettingsStore`.
+4. Route runtime behavior through `PetController`.
+5. Route resource changes through `PetResourceRepository` and manifest models.
+6. Add focused tests at the same layer where behavior changed.
+7. Run `dart format lib test`, `flutter analyze`, and `flutter test`.
