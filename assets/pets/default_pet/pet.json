@@ -1,0 +1,21 @@
+{
+  "id": "default_pet",
+  "name": "Default Pet",
+  "description": "Default desktop pet.",
+  "defaultScale": 1.0,
+  "atlas": {
+    "image": "spritesheet.webp",
+    "columns": 8,
+    "rows": 9,
+    "frameWidth": 192,
+    "frameHeight": 208
+  },
+  "animations": {
+    "idle": {
+      "row": 0,
+      "frames": [0, 1, 2, 3, 4, 5],
+      "durationsMs": [280, 110, 110, 140, 140, 320],
+      "loop": true
+    }
+  }
+}
