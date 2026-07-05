@@ -4,9 +4,9 @@ Flutter desktop pet PoC for macOS. The app renders a transparent, borderless, al
 
 ## Status
 
-Current release: `v0.1.0`
+Current release: `v0.1.1`
 
-Release state: first macOS internal alpha. Core behavior has passed automated checks and manual smoke testing. The app is functional, but the context menu is still minimal and has a known dismissal UX issue.
+Release state: macOS internal alpha. Core behavior has passed automated checks. The app is functional, but the context menu is still visually minimal.
 
 ## Features
 
@@ -17,14 +17,13 @@ Release state: first macOS internal alpha. Core behavior has passed automated ch
 - Strict normalized pet manifest parsing.
 - Atlas-based `idle` animation with manifest-defined frame timing.
 - Drag-to-move window behavior with persisted position.
-- Right-click menu for pet switching and size controls.
+- Auxiliary-window right-click menu for pet switching, size controls, always-on-top, resource refresh, config reset, recovery, and quit.
 - Config persistence through `SettingsStore`.
 - Runtime behavior managed through `PetController` and `PetState`.
 
 ## Known Issues
 
 - The right-click menu is visually rough.
-- Clicking outside the right-click menu may not reliably dismiss it in the current transparent desktop window.
 - The app is ad-hoc signed but not notarized. Users must right-click Open on first launch.
 - macOS is the only validated platform for this release.
 

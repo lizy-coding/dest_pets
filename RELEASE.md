@@ -1,5 +1,63 @@
 # Release Notes
 
+## v0.1.1
+
+Date: 2026-07-05
+
+Type: macOS internal alpha patch.
+
+### Scope
+
+This patch improves the right-click pet menu:
+
+- Moves the pet context menu into a lightweight auxiliary desktop window.
+- Anchors the menu from the actual mouse screen position.
+- Keeps the existing display visible-area clamp for screen-edge avoidance.
+- Adds menu actions for always-on-top, refresh resources, reset config, recovery, and quit.
+- Closes the menu when the auxiliary window loses focus.
+
+### Manual Smoke Test
+
+Not yet manually verified in this release session:
+
+- Pet near the lower-right screen edge opens the menu near the cursor.
+- Pet near screen edges keeps the menu inside the visible display area.
+- Multi-display right-click opens the menu on the corresponding display.
+- Clicking away closes the menu through auxiliary window blur.
+
+### Verification Commands
+
+Run before publishing artifacts:
+
+```sh
+dart format lib test
+flutter analyze
+flutter test
+flutter build macos --debug
+flutter build macos --release
+bash scripts/package_dmg.sh
+```
+
+### Artifacts
+
+Release build:
+
+```text
+build/macos/Build/Products/Release/Desktop Pet.app
+```
+
+Packaged DMG:
+
+```text
+dist/Desktop Pet-0.1.1.dmg
+```
+
+### Publishing Notes
+
+This release is not signed with a Developer ID and is not notarized. The packaging script applies ad-hoc signing only.
+
+Users opening the DMG for the first time may need to right-click the app and select Open to bypass Gatekeeper.
+
 ## v0.1.0
 
 Date: 2026-07-04

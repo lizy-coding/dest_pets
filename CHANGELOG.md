@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.1 - 2026-07-05
+
+Patch macOS internal alpha release.
+
+### Added
+
+- Auxiliary desktop window for the right-click pet context menu.
+- Context menu actions for always-on-top, refresh resources, reset config, recover from error, and quit.
+- Tests for auxiliary menu actions, menu model serialization, and cursor-based menu anchoring.
+
+### Changed
+
+- Right-click now opens the context menu near the mouse screen position instead of using Flutter window-local coordinates.
+- Dragging the pet closes any open auxiliary context menu.
+
+### Fixed
+
+- Context menu placement no longer drifts toward the top-left when the pet window is away from the origin.
+- Context menu closes on auxiliary window blur.
+
 ## 0.1.0 - 2026-07-04
 
 First macOS internal alpha release.
