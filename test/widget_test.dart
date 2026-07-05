@@ -1,5 +1,7 @@
 import 'package:desktop_pet/app/app.dart';
+import 'package:desktop_pet/desktop/auxiliary_window_controller.dart';
 import 'package:desktop_pet/desktop/desktop_window_controller.dart';
+import 'package:desktop_pet/pet/model/pet_settings_snapshot.dart';
 import 'package:desktop_pet/pet/view/pet_actor.dart';
 import 'package:desktop_pet/resources/data/pet_resource_repository.dart';
 import 'package:desktop_pet/resources/model/pet_manifest.dart';
@@ -19,6 +21,25 @@ class FakePetResourceRepository extends PetResourceRepository {
   }
 }
 
+class FakeAuxiliaryWindowController implements AuxiliaryWindowController {
+  @override
+  Future<void> initializePetMenuActionHandler(
+    PetMenuActionHandler handler,
+  ) async {}
+
+  @override
+  Future<void> showContextMenu({
+    required Offset anchorGlobalPosition,
+    required PetSettingsSnapshot snapshot,
+  }) async {}
+
+  @override
+  Future<void> closeContextMenu() async {}
+
+  @override
+  void dispose() {}
+}
+
 void main() {
   testWidgets('renders the desktop pet view', (tester) async {
     SharedPreferences.setMockInitialValues({});
@@ -31,6 +52,7 @@ void main() {
     await tester.pumpWidget(
       App(
         windowController: windowController,
+        auxiliaryWindowController: FakeAuxiliaryWindowController(),
         settingsStore: settingsStore,
         resourceRepository: FakePetResourceRepository([pet]),
       ),

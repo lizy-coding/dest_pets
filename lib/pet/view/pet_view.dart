@@ -1,16 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../desktop/auxiliary_window_controller.dart';
 import '../../desktop/desktop_window_controller.dart';
 import '../controller/pet_controller.dart';
+import '../model/pet_settings_snapshot.dart';
 import 'pet_actor.dart';
 import 'pet_hit_area.dart';
 
-class PetView extends StatelessWidget {
-  const PetView({required this.windowController, super.key});
+class PetView extends StatefulWidget {
+  const PetView({
+    required this.windowController,
+    required this.auxiliaryWindowController,
+    super.key,
+  });
 
   final DesktopWindowController windowController;
+  final AuxiliaryWindowController auxiliaryWindowController;
 
+  @override
+  State<PetView> createState() => _PetViewState();
+}
+
+class _PetViewState extends State<PetView> {
   @override
   Widget build(BuildContext context) {
     return Consumer<PetController>(
@@ -26,18 +38,22 @@ class PetView extends StatelessWidget {
                 dimension: 200,
                 child: PetHitArea(
                   onPanStart: (_) {
+                    widget.auxiliaryWindowController.closeContextMenu();
                     controller.startDragging();
-                    windowController.startDragging();
+                    widget.windowController.startDragging();
                   },
                   onPanEnd: (_) async {
                     final position =
-                        await windowController.getPosition() ??
+                        await widget.windowController.getPosition() ??
                         controller.state.config.windowPosition ??
                         Offset.zero;
                     await controller.endDragging(position);
                   },
-                  onSecondaryTapDown: (details) {
-                    _showPetMenu(context, details);
+                  onSecondaryTapDown: (details) async {
+                    await widget.auxiliaryWindowController.showContextMenu(
+                      anchorGlobalPosition: details.globalPosition,
+                      snapshot: PetSettingsSnapshot.fromState(state),
+                    );
                   },
                   child: Padding(
                     padding: const EdgeInsets.all(8),
@@ -58,61 +74,5 @@ class PetView extends StatelessWidget {
         );
       },
     );
-  }
-
-  Future<void> _showPetMenu(
-    BuildContext context,
-    TapDownDetails details,
-  ) async {
-    final controller = context.read<PetController>();
-    final resources = controller.state.availableResources;
-    if (resources.isEmpty) {
-      return;
-    }
-
-    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    final selectedAction = await showMenu<String>(
-      context: context,
-      position: RelativeRect.fromRect(
-        Rect.fromPoints(details.globalPosition, details.globalPosition),
-        Offset.zero & overlay.size,
-      ),
-      items: [
-        for (final resource in resources)
-          CheckedPopupMenuItem<String>(
-            value: 'pet:${resource.id}',
-            checked: resource.id == controller.state.config.petId,
-            child: Text(resource.menuLabel),
-          ),
-        const PopupMenuDivider(),
-        const PopupMenuItem<String>(
-          value: 'scale:increase',
-          child: Text('Increase size'),
-        ),
-        const PopupMenuItem<String>(
-          value: 'scale:decrease',
-          child: Text('Decrease size'),
-        ),
-        const PopupMenuItem<String>(
-          value: 'scale:reset',
-          child: Text('Reset size'),
-        ),
-      ],
-    );
-
-    if (!context.mounted || selectedAction == null) {
-      return;
-    }
-
-    final petController = context.read<PetController>();
-    if (selectedAction.startsWith('pet:')) {
-      await petController.switchPet(selectedAction.substring(4));
-    } else if (selectedAction == 'scale:increase') {
-      await petController.increaseScale();
-    } else if (selectedAction == 'scale:decrease') {
-      await petController.decreaseScale();
-    } else if (selectedAction == 'scale:reset') {
-      await petController.resetScale();
-    }
   }
 }
