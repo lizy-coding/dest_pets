@@ -40,18 +40,13 @@ class PetController extends ChangeNotifier {
     try {
       final loadedConfig = await _settingsStore.loadConfig();
       final config = _normalizeConfig(loadedConfig ?? const PetConfig());
-      final resources = await _resourceRepository.loadAvailableResources();
-      final resource = _resourceRepository.resolveResource(
-        resources,
-        config.petId,
-      );
-      final resolvedConfig = config.copyWith(petId: resource.id);
+      final resolved = await _loadResourcesForConfig(config);
 
       _setState(
         PetState(
-          config: resolvedConfig,
-          resource: resource,
-          availableResources: resources,
+          config: resolved.config,
+          resource: resolved.resource,
+          availableResources: resolved.resources,
           runtimeMode: PetRuntimeMode.idle,
           animationState: const PetAnimationState(),
         ),
@@ -61,6 +56,40 @@ class PetController extends ChangeNotifier {
         _state.copyWith(
           runtimeMode: PetRuntimeMode.error,
           resource: null,
+          errorMessage: error.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> refreshResources() async {
+    _setState(
+      _state.copyWith(
+        runtimeMode: PetRuntimeMode.switchingResource,
+        errorMessage: null,
+      ),
+    );
+
+    try {
+      final previousConfig = _state.config;
+      final resolved = await _loadResourcesForConfig(previousConfig);
+      _setState(
+        _state.copyWith(
+          config: resolved.config,
+          resource: resolved.resource,
+          availableResources: resolved.resources,
+          runtimeMode: PetRuntimeMode.idle,
+          errorMessage: null,
+        ),
+      );
+
+      if (resolved.config != previousConfig) {
+        await _settingsStore.saveConfig(resolved.config);
+      }
+    } catch (error) {
+      _setState(
+        _state.copyWith(
+          runtimeMode: PetRuntimeMode.error,
           errorMessage: error.toString(),
         ),
       );
@@ -133,6 +162,37 @@ class PetController extends ChangeNotifier {
     await _settingsStore.saveConfig(config);
   }
 
+  Future<void> resetConfig() async {
+    _setState(
+      _state.copyWith(
+        runtimeMode: PetRuntimeMode.initializing,
+        errorMessage: null,
+      ),
+    );
+
+    try {
+      await _settingsStore.resetConfig();
+      final resolved = await _loadResourcesForConfig(const PetConfig());
+      _setState(
+        _state.copyWith(
+          config: resolved.config,
+          resource: resolved.resource,
+          availableResources: resolved.resources,
+          runtimeMode: PetRuntimeMode.idle,
+          animationState: const PetAnimationState(),
+          errorMessage: null,
+        ),
+      );
+    } catch (error) {
+      _setState(
+        _state.copyWith(
+          runtimeMode: PetRuntimeMode.error,
+          errorMessage: error.toString(),
+        ),
+      );
+    }
+  }
+
   void startDragging() {
     if (_state.runtimeMode != PetRuntimeMode.idle) {
       return;
@@ -159,6 +219,23 @@ class PetController extends ChangeNotifier {
 
   Future<void> recoverFromError() async {
     await initialize();
+  }
+
+  Future<_ResolvedPetResources> _loadResourcesForConfig(
+    PetConfig config,
+  ) async {
+    final resources = await _resourceRepository.loadAvailableResources();
+    final resource = _resourceRepository.resolveResource(
+      resources,
+      config.petId,
+    );
+    final resolvedConfig = config.copyWith(petId: resource.id);
+
+    return _ResolvedPetResources(
+      config: resolvedConfig,
+      resource: resource,
+      resources: resources,
+    );
   }
 
   PetConfig _normalizeConfig(PetConfig config) {
@@ -188,4 +265,16 @@ class PetController extends ChangeNotifier {
     _state = state;
     notifyListeners();
   }
+}
+
+class _ResolvedPetResources {
+  const _ResolvedPetResources({
+    required this.config,
+    required this.resource,
+    required this.resources,
+  });
+
+  final PetConfig config;
+  final PetResource resource;
+  final List<PetResource> resources;
 }
