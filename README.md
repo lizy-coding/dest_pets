@@ -4,6 +4,10 @@
 
 `desktop_pet` is a Flutter macOS desktop pet proof of concept. It renders a Codex atlas pet animation in a transparent, borderless, always-on-top desktop window, supports dragging, a right-click menu, local pet resource discovery, and persists the selected pet, scale, always-on-top preference, and window position.
 
+## Example
+
+![Desktop Pet example](view/mq.gif)
+
 ## Status
 
 Current release: `v0.1.1`

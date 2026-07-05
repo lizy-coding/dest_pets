@@ -4,6 +4,10 @@
 
 `desktop_pet` 是一个 Flutter macOS 桌面宠物 PoC。它在透明、无边框、置顶的桌面窗口中渲染 Codex atlas 宠物动画，支持拖动、右键菜单、本地宠物资源发现，并持久化当前宠物、缩放、置顶偏好和窗口位置。
 
+## 示例
+
+![Desktop Pet 示例](view/mq.gif)
+
 ## 状态
 
 当前版本：`v0.1.1`
