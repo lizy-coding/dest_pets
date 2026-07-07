@@ -181,7 +181,8 @@ class PetResourceRepository {
       return '$codexHome/pets';
     }
 
-    final home = Platform.environment['HOME'];
+    final home =
+        Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
     if (home == null || home.isEmpty) {
       return null;
     }
