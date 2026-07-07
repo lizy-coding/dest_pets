@@ -29,7 +29,7 @@ Known limitations:
 - Local resource validation failures are only ignored, not reported to the user.
 - Only `idle` animation is used by runtime behavior.
 - App has no production icon, Developer ID signing, or notarization.
-- macOS is the only validated platform.
+- Windows support is scaffolded but not yet fully validated.
 
 ## Product Direction
 
@@ -48,7 +48,7 @@ The app should stay a lightweight desktop utility:
 Do not spend v0.x effort on:
 
 - Cloud sync, accounts, remote pet marketplaces, or telemetry.
-- Cross-platform UX promises beyond macOS validation.
+- Cross-platform UX promises beyond macOS and Windows validation.
 - A large preferences app before resource validation and menu polish are stable.
 - Backward compatibility for pre-v0.1 manifests or old SharedPreferences keys.
 - A new rendering framework while the current atlas renderer is sufficient.
@@ -174,7 +174,7 @@ Candidate tasks:
 
 Implementation rules:
 
-- Native calls stay inside `DesktopWindowController`, `DesktopAuxiliaryWindowController`, `MacosWindowBootstrap`, or `AuxiliaryWindowBootstrap`.
+- Native calls stay inside `DesktopWindowController`, `DesktopAuxiliaryWindowController`, and `DesktopWindowBootstrap` subclasses (`MacosWindowBootstrap`, `WindowsWindowBootstrap`) or `AuxiliaryWindowBootstrap`.
 - Any new native behavior needs a test seam or explicit manual smoke checklist.
 - Do not scatter `window_manager`, `screen_retriever`, or `desktop_multi_window` calls into UI widgets.
 
@@ -183,25 +183,52 @@ Exit criteria:
 - Manual macOS smoke test covers restart, Spaces, multiple displays, edge placement, and quit.
 - Release docs describe expected dock/menu behavior.
 
-### v1.0.0 - Distributable macOS App
+### v0.6.0 - Windows Platform Validation
 
-Goal: ship a real end-user macOS build.
+Goal: validate the Windows desktop integration scaffold and make Windows a supported target.
+
+Tasks:
+
+- Create `windows/` native project scaffold.
+- Implement `WindowsWindowBootstrap` extending `DesktopWindowBootstrap`.
+- Decouple `DesktopWindowController` from `MacosWindowBootstrap` through the `WindowBootstrap` abstraction.
+- Move platform dispatch to `main.dart`.
+- Fix local resource path resolution for Windows (`%USERPROFILE%` fallback).
+- Create Windows packaging script (`scripts/package_windows.bat`).
+
+Implementation rules:
+
+- Shared window initialization logic lives in `DesktopWindowBootstrap`.
+- Platform-specific hooks (`skipTaskbar`, `applyPlatformSpecificOptions`) are overridden in concrete bootstraps.
+- No `setVisibleOnAllWorkspaces` call on Windows (API does not exist).
+- `DesktopWindowController` accepts an optional `WindowBootstrap` via dependency injection.
+
+Exit criteria:
+
+- `flutter create --platforms=windows` succeeds and the scaffold is complete.
+- `flutter analyze` and `flutter test` pass on macOS.
+- Windows build configuration and packaging script are ready for validation.
+- Architecture decoupling is verified: `DesktopWindowController` has no static `Platform` branch.
+
+### v1.0.0 - Distributable Desktop App
+
+Goal: ship a real end-user desktop build with verified macOS and Windows support.
 
 Tasks:
 
 - Add production app icon.
-- Configure Developer ID signing.
-- Configure notarization.
+- Configure code signing for macOS (Developer ID, notarization) and Windows.
 - Review bundle identifier and copyright.
-- Decide final artifact format.
-- Add signed release checklist.
-- Verify install/open behavior on a clean macOS account.
+- Decide final artifact formats.
+- Add signed release checklist for both platforms.
+- Verify install/open behavior on clean macOS and Windows accounts.
 
 Exit criteria:
 
-- Release artifact is signed and notarized.
+- Release artifacts are signed and notarized (macOS) / code-signed (Windows).
 - Gatekeeper opens the app through normal double-click after install.
-- README includes user-facing install, troubleshooting, and uninstall notes.
+- Windows build passes SmartScreen without blocking.
+- README includes user-facing install, troubleshooting, and uninstall notes for both platforms.
 
 ## Architecture Guardrails
 
@@ -224,6 +251,7 @@ Main window:
 ```text
 main.dart
   -> SettingsStore
+  -> WindowBootstrap (MacosWindowBootstrap | WindowsWindowBootstrap)
   -> DesktopWindowController
   -> DesktopAuxiliaryWindowController
   -> App
@@ -253,7 +281,7 @@ main.dart
 - Put SharedPreferences access only in `SettingsStore`.
 - Put native window calls only in desktop boundary classes.
 - Add tests at the same layer where behavior changes.
-- Keep releases synchronized across `pubspec.yaml`, `CHANGELOG.md`, `RELEASE.md`, `README.md`, and macOS metadata when needed.
+- Keep releases synchronized across `pubspec.yaml`, `CHANGELOG.md`, `RELEASE.md`, `README.md`, macOS metadata, and Windows metadata when needed.
 
 ### Do Not
 
@@ -290,6 +318,13 @@ flutter build macos --release
 bash scripts/package_dmg.sh
 ```
 
+Before Windows-tagged releases also run:
+
+```bat
+flutter build windows --release
+scripts\package_windows.bat
+```
+
 Update release files:
 
 - `pubspec.yaml`
@@ -298,6 +333,8 @@ Update release files:
 - `README.md`
 - `macos/Runner/Configs/AppInfo.xcconfig` if app identity changes
 - `scripts/package_dmg.sh` if artifact behavior changes
+- `scripts/package_windows.bat` if artifact behavior changes
+- `windows/runner/main.cpp` if native window behavior changes
 
 Publish:
 
@@ -311,4 +348,10 @@ If using GitHub Releases, upload the generated DMG from:
 
 ```text
 dist/Desktop Pet-<version>.dmg
+```
+
+And/or the Windows zip from:
+
+```text
+dist/Desktop Pet-<version>-windows-x64.zip
 ```

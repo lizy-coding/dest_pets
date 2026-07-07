@@ -6,11 +6,11 @@ Instructions for AI agents working on this project. Keep changes aligned with th
 
 ## Overview
 
-**desktop_pet** is a Flutter macOS desktop pet PoC. It renders a transparent, borderless, always-on-top desktop mascot, plays a Codex atlas animation, supports drag-to-move, can switch local pet resources, and persists current-version user config.
+**desktop_pet** is a Flutter desktop pet PoC. It renders a transparent, borderless, always-on-top desktop mascot, plays a Codex atlas animation, supports drag-to-move, can switch local pet resources, and persists current-version user config.
 
-- **Current release**: `v0.1.0` internal macOS alpha
-- **Tech stack**: Flutter (Dart SDK ^3.11.5), Material 3, `window_manager`, `screen_retriever`, `shared_preferences`, `provider`
-- **Primary platform**: macOS
+- **Current release**: `v0.1.1` internal alpha
+- **Tech stack**: Flutter (Dart SDK ^3.11.5), Material 3, `window_manager`, `screen_retriever`, `shared_preferences`, `provider`, `desktop_multi_window`
+- **Target platforms**: macOS (validated), Windows (scaffolded)
 - **Lint**: `flutter_lints` ^6.0.0
 
 ---
@@ -24,7 +24,9 @@ lib/
 │   └── app.dart
 ├── desktop/
 │   ├── desktop_window_controller.dart
-│   └── macos_window_bootstrap.dart
+│   ├── macos_window_bootstrap.dart
+│   ├── window_bootstrap.dart
+│   └── windows_window_bootstrap.dart
 ├── pet/
 │   ├── animation/
 │   │   ├── pet_animation_controller.dart
@@ -64,13 +66,16 @@ Do not use older names from pre-v0.1 code. In particular, do not recreate `PetPa
 | Task | Command |
 | --- | --- |
 | Run macOS | `flutter run -d macos` |
+| Run Windows | `flutter run -d windows` |
 | Analyze/lint | `flutter analyze` |
 | Test | `flutter test` |
-| Debug build | `flutter build macos --debug` |
-| Release build | `flutter build macos --release` |
+| Debug build (macOS) | `flutter build macos --debug` |
+| Release build (macOS) | `flutter build macos --release` |
+| Release build (Windows) | `flutter build windows --release` |
 | Get deps | `flutter pub get` |
 | Upgrade deps | `flutter pub upgrade --major-versions` |
 | Package DMG | `bash scripts/package_dmg.sh` |
+| Package Windows | `scripts/package_windows.bat` |
 
 Before release-oriented changes, run the verification commands then the packaging script:
 
@@ -93,7 +98,7 @@ bash scripts/package_dmg.sh
 - **Runtime state model**: Render/runtime state belongs in `PetState`.
 - **Resource model**: Resource parsing and validation belongs under `lib/resources/`.
 - **Settings model**: SharedPreferences access belongs only in `SettingsStore`.
-- **Window boundary**: Native window calls belong only in `DesktopWindowController` and `MacosWindowBootstrap`.
+- **Window boundary**: Native window calls belong only in `DesktopWindowController` and concrete `WindowBootstrap` subclasses (`MacosWindowBootstrap`, `WindowsWindowBootstrap`).
 - **Renderer boundary**: `PetActor` renders a `PetResource` plus `PetAnimationState`; it must not know about settings, repositories, or controller methods.
 
 Dependency flow should stay:
@@ -101,7 +106,9 @@ Dependency flow should stay:
 ```text
 main.dart
   -> SettingsStore
+  -> WindowBootstrap (MacosWindowBootstrap | WindowsWindowBootstrap)
   -> DesktopWindowController
+  -> DesktopAuxiliaryWindowController
   -> App
        -> PetResourceRepository
        -> PetController
@@ -245,6 +252,8 @@ Keep these files synchronized for release work:
 - `README.md`
 - `macos/Runner/Configs/AppInfo.xcconfig`
 - `scripts/package_dmg.sh`
+- `scripts/package_windows.bat`
+- `windows/runner/main.cpp`
 
 The current unsigned artifact path is:
 
@@ -256,6 +265,12 @@ The packaged DMG output path is:
 
 ```text
 dist/Desktop Pet-<version>.dmg
+```
+
+The packaged Windows zip output path is:
+
+```text
+dist/Desktop Pet-<version>-windows-x64.zip
 ```
 
 ---
