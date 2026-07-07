@@ -1,6 +1,7 @@
 import 'package:desktop_pet/app/app.dart';
 import 'package:desktop_pet/desktop/auxiliary_window_controller.dart';
 import 'package:desktop_pet/desktop/desktop_window_controller.dart';
+import 'package:desktop_pet/desktop/platform_capabilities.dart';
 import 'package:desktop_pet/pet/controller/pet_controller.dart';
 import 'package:desktop_pet/pet/model/pet_config.dart';
 import 'package:desktop_pet/pet/model/pet_menu_action.dart';
@@ -102,11 +103,22 @@ class FakePetController extends PetController {
 }
 
 class FakeDesktopWindowController extends DesktopWindowController {
-  FakeDesktopWindowController() : super(settingsStore: SettingsStore());
+  FakeDesktopWindowController() : super();
 
   bool closeCalled = false;
   bool startDraggingCalled = false;
   bool? alwaysOnTopValue;
+
+  @override
+  PlatformCapabilities get capabilities {
+    return const PlatformCapabilities(
+      supportsTransparency: true,
+      supportsClickThrough: false,
+      supportsTray: false,
+      supportsLaunchAtStartup: false,
+      supportsGlobalShortcut: false,
+    );
+  }
 
   @override
   Future<void> startDragging() async {

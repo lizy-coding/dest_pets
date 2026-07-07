@@ -4,32 +4,47 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../settings/settings_store.dart';
-import 'macos_window_bootstrap.dart';
+import 'pet_window_service.dart';
+import 'platform_capabilities.dart';
+import 'window_bootstrap.dart';
 
-class DesktopWindowController with WindowListener {
-  DesktopWindowController({required SettingsStore settingsStore})
-    : _settingsStore = settingsStore;
+class DesktopWindowController with WindowListener implements PetWindowService {
+  DesktopWindowController({this.windowBootstrap});
 
-  final SettingsStore _settingsStore;
+  final WindowBootstrap? windowBootstrap;
   bool _initialized = false;
 
   bool get supportsNativeWindowControl =>
       !kIsWeb && (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
 
+  @override
+  PlatformCapabilities get capabilities {
+    if (!supportsNativeWindowControl) {
+      return const PlatformCapabilities.none();
+    }
+
+    return PlatformCapabilities(
+      supportsTransparency: Platform.isMacOS || Platform.isWindows,
+      supportsClickThrough: Platform.isMacOS || Platform.isWindows,
+      supportsTray: Platform.isMacOS || Platform.isWindows || Platform.isLinux,
+      supportsLaunchAtStartup: Platform.isMacOS || Platform.isWindows,
+      supportsGlobalShortcut: false,
+    );
+  }
+
+  @override
   Future<void> initialize() async {
     if (_initialized || !supportsNativeWindowControl) {
       return;
     }
 
-    if (Platform.isMacOS) {
-      await MacosWindowBootstrap(settingsStore: _settingsStore).initialize();
-    }
+    await windowBootstrap?.initialize();
 
     windowManager.addListener(this);
     _initialized = true;
   }
 
+  @override
   Future<void> startDragging() async {
     if (!_initialized || !supportsNativeWindowControl) {
       return;
@@ -38,6 +53,7 @@ class DesktopWindowController with WindowListener {
     await windowManager.startDragging();
   }
 
+  @override
   Future<Offset?> getPosition() async {
     if (!_initialized || !supportsNativeWindowControl) {
       return null;
@@ -46,6 +62,7 @@ class DesktopWindowController with WindowListener {
     return windowManager.getPosition();
   }
 
+  @override
   Future<void> setAlwaysOnTop(bool value) async {
     if (!_initialized || !supportsNativeWindowControl) {
       return;
@@ -54,6 +71,75 @@ class DesktopWindowController with WindowListener {
     await windowManager.setAlwaysOnTop(value);
   }
 
+  @override
+  Future<void> setTransparent(bool value) async {
+    if (!_initialized || !supportsNativeWindowControl) {
+      return;
+    }
+
+    await windowManager.setBackgroundColor(
+      value ? const Color(0x00000000) : const Color(0xFFFFFFFF),
+    );
+  }
+
+  @override
+  Future<void> setFrameless(bool value) async {
+    if (!_initialized || !supportsNativeWindowControl) {
+      return;
+    }
+
+    await windowManager.setTitleBarStyle(
+      value ? TitleBarStyle.hidden : TitleBarStyle.normal,
+      windowButtonVisibility: !value,
+    );
+  }
+
+  @override
+  Future<void> setClickThrough(bool value) async {
+    if (!_initialized || !supportsNativeWindowControl) {
+      return;
+    }
+
+    await windowManager.setIgnoreMouseEvents(value);
+  }
+
+  @override
+  Future<void> setSize(Size size) async {
+    if (!_initialized || !supportsNativeWindowControl) {
+      return;
+    }
+
+    await windowManager.setSize(size);
+  }
+
+  @override
+  Future<void> setPosition(Offset position) async {
+    if (!_initialized || !supportsNativeWindowControl) {
+      return;
+    }
+
+    await windowManager.setPosition(position);
+  }
+
+  @override
+  Future<void> show() async {
+    if (!_initialized || !supportsNativeWindowControl) {
+      return;
+    }
+
+    await windowManager.show();
+  }
+
+  @override
+  Future<void> hide() async {
+    if (!_initialized || !supportsNativeWindowControl) {
+      return;
+    }
+
+    await windowManager.hide();
+  }
+
+  @override
   Future<void> close() async {
     if (!_initialized || !supportsNativeWindowControl) {
       return;
@@ -65,6 +151,7 @@ class DesktopWindowController with WindowListener {
   @override
   void onWindowMoved() {}
 
+  @override
   void dispose() {
     if (_initialized && supportsNativeWindowControl) {
       windowManager.removeListener(this);

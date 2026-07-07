@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../desktop/auxiliary_window_controller.dart';
-import '../../desktop/desktop_window_controller.dart';
+import '../../desktop/pet_window_service.dart';
 import '../controller/pet_controller.dart';
 import '../model/pet_settings_snapshot.dart';
 import 'pet_actor.dart';
@@ -15,7 +15,7 @@ class PetView extends StatefulWidget {
     super.key,
   });
 
-  final DesktopWindowController windowController;
+  final PetWindowService windowController;
   final AuxiliaryWindowController auxiliaryWindowController;
 
   @override

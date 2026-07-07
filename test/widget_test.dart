@@ -44,9 +44,7 @@ void main() {
   testWidgets('renders the desktop pet view', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final settingsStore = SettingsStore();
-    final windowController = DesktopWindowController(
-      settingsStore: settingsStore,
-    );
+    final windowController = DesktopWindowController();
     final pet = _resource();
 
     await tester.pumpWidget(

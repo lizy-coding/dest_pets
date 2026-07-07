@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../desktop/auxiliary_window_controller.dart';
-import '../desktop/desktop_window_controller.dart';
+import '../desktop/pet_window_service.dart';
 import '../pet/model/pet_menu_action.dart';
 import '../pet/controller/pet_controller.dart';
 import '../pet/view/pet_view.dart';
@@ -21,7 +21,7 @@ class App extends StatelessWidget {
     super.key,
   });
 
-  final DesktopWindowController windowController;
+  final PetWindowService windowController;
   final AuxiliaryWindowController auxiliaryWindowController;
   final SettingsStore? settingsStore;
   final PetResourceRepository? resourceRepository;
@@ -92,7 +92,7 @@ class _PetMenuActionBinding extends StatefulWidget {
     required this.child,
   });
 
-  final DesktopWindowController windowController;
+  final PetWindowService windowController;
   final AuxiliaryWindowController auxiliaryWindowController;
   final Widget child;
 
