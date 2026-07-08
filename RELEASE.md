@@ -14,16 +14,20 @@ This patch improves the right-click pet menu:
 - Anchors the menu from the actual mouse screen position.
 - Keeps the existing display visible-area clamp for screen-edge avoidance.
 - Adds menu actions for always-on-top, refresh resources, reset config, recovery, and quit.
+- Shows compact pet status, current scale, and error/recovery feedback in the menu.
+- Removes the unimplemented Settings entry until the focused v0.2 settings surface is built.
 - Closes the menu when the auxiliary window loses focus.
 
 ### Manual Smoke Test
 
-Not yet manually verified in this release session:
+Run before publishing artifacts:
 
-- Pet near the lower-right screen edge opens the menu near the cursor.
-- Pet near screen edges keeps the menu inside the visible display area.
-- Multi-display right-click opens the menu on the corresponding display.
-- Clicking away closes the menu through auxiliary window blur.
+- Launch the app, drag the pet, quit, and relaunch to confirm position persistence.
+- Open the menu near the lower-right screen edge and confirm it opens near the cursor.
+- Open the menu near each screen edge and confirm it stays inside the visible display area.
+- On multi-display setups, right-click on each display and confirm the menu opens on the corresponding display.
+- Click away from the menu and confirm auxiliary window blur closes it.
+- Switch to a valid local resource, refresh resources, then switch back to the bundled resource.
 
 ### Verification Commands
 

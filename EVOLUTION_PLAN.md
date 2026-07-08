@@ -69,10 +69,9 @@ Completed in `v0.1.1`:
 
 Remaining tasks:
 
-- Improve `PetContextMenu` visual polish while keeping it lightweight.
 - Add manual smoke coverage notes for multi-display and screen-edge menu positioning.
-- Add a small visible status/error affordance in the menu or pet surface.
-- Decide whether the unimplemented settings panel placeholder should stay as a future hook or be removed until v0.2.
+- Run and record manual smoke coverage for multi-display and screen-edge menu positioning.
+- Keep the removed settings entry out of the v0.1.x menu until a focused v0.2 surface is implemented.
 
 Exit criteria:
 

@@ -12,7 +12,7 @@
 
 Current release: `v0.1.1`
 
-Release state: macOS internal alpha. Core paths pass automated verification and the app is runnable. The right-click menu now runs in an auxiliary window and uses the real cursor screen position, but its visual design is still basic.
+Release state: macOS internal alpha. Core paths pass automated verification and the app is runnable. The right-click menu runs in an auxiliary window, uses the real cursor screen position, and shows compact status/error feedback.
 
 ## Features
 
@@ -23,13 +23,13 @@ Release state: macOS internal alpha. Core paths pass automated verification and 
 - Strict normalized `pet.json` manifest parsing.
 - Atlas-based `idle` animation with manifest-defined frame timing.
 - Drag-to-move window behavior with persisted position.
-- Auxiliary-window right-click menu for pet switching, size controls, always-on-top, resource refresh, config reset, recovery, and quit.
+- Auxiliary-window right-click menu for status, pet switching, size controls, always-on-top, resource refresh, config reset, recovery, and quit.
 - Config persistence through `SettingsStore`.
 - Runtime behavior managed through `PetController` and `PetState`.
 
 ## Known Limitations
 
-- The right-click menu is visually rough.
+- Local resource validation failures are ignored instead of surfaced with detailed reasons.
 - The app is ad-hoc signed, not Developer ID signed or notarized. First launch requires right-click Open.
 - macOS is the only validated platform for this release.
 
@@ -87,6 +87,14 @@ flutter build macos --debug
 flutter build macos --release
 bash scripts/package_dmg.sh
 ```
+
+Manual smoke checklist for the macOS alpha:
+
+- Launch, drag the pet, quit, and relaunch to confirm position persistence.
+- Open the right-click menu near each screen edge and confirm it stays visible.
+- Click away from the menu and confirm the auxiliary window closes.
+- Switch between bundled and local resources, then refresh resources.
+- Repeat the menu open and edge-position checks on each connected display.
 
 ## Pet Resource Format
 
@@ -188,7 +196,7 @@ main.dart
 
 See `EVOLUTION_PLAN.md` for the full plan. Near-term priorities:
 
-1. Improve menu visual design, error presentation, and settings entry without adding a large settings page.
-2. Add local resource validation reporting so users can understand ignored resources.
-3. Keep `PetActor` render-only before expanding animation behavior.
-4. Add app icon, Developer ID signing, and notarization before end-user distribution.
+1. Add local resource validation reporting so users can understand ignored resources.
+2. Keep `PetActor` render-only before expanding animation behavior.
+3. Add app icon, Developer ID signing, and notarization before end-user distribution.
+4. Validate the Windows scaffold after the macOS alpha baseline stays green.

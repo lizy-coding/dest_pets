@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Polished the auxiliary right-click menu with a compact pet/status header, current scale display, and clearer status/error messaging.
+- Removed the unimplemented Settings menu entry until a focused v0.2 settings surface exists.
+
 ## 0.1.1 - 2026-07-05
 
 Patch macOS internal alpha release.
