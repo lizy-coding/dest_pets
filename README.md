@@ -29,7 +29,7 @@ Release state: macOS internal alpha. Core paths pass automated verification and 
 
 ## Known Limitations
 
-- Local resource validation failures are ignored instead of surfaced with detailed reasons.
+- Local resource validation reports exist in the repository layer, but invalid resource reasons are not yet surfaced in UI.
 - The app is ad-hoc signed, not Developer ID signed or notarized. First launch requires right-click Open.
 - macOS is the only validated platform for this release.
 
@@ -140,7 +140,7 @@ Manifest shape:
 }
 ```
 
-Invalid manifests, unsafe relative paths, missing spritesheets, missing atlas data, and resources without an `idle` animation are ignored. Invalid bundled resources should fail initialization.
+Invalid manifests, unsafe relative paths, missing spritesheets, missing atlas data, and resources without an `idle` animation are ignored by runtime resource loading. The repository also exposes structured ignored-resource reports for future validation UI. Invalid bundled resources should fail initialization.
 
 ## Architecture
 
@@ -155,7 +155,10 @@ lib/
 │   ├── auxiliary_window_controller.dart
 │   ├── desktop_auxiliary_window_controller.dart
 │   ├── desktop_window_controller.dart
-│   └── macos_window_bootstrap.dart
+│   ├── macos_window_bootstrap.dart
+│   ├── platform_capabilities.dart
+│   ├── window_bootstrap.dart
+│   └── windows_window_bootstrap.dart
 ├── pet/
 │   ├── animation/
 │   ├── controller/pet_controller.dart
@@ -172,6 +175,7 @@ Main window runtime flow:
 ```text
 main.dart
   -> SettingsStore
+  -> WindowBootstrap (MacosWindowBootstrap | WindowsWindowBootstrap)
   -> DesktopWindowController
   -> DesktopAuxiliaryWindowController
   -> App
@@ -191,6 +195,21 @@ main.dart
   -> PetMenuWindowApp
        -> PetContextMenu
 ```
+
+## Windows Validation Checklist
+
+Windows is scaffolded but not a supported release target yet. Before changing that status, validate on a Windows host:
+
+- `flutter build windows --release`
+- `scripts/package_windows.bat`
+- Launch from the release build and packaged zip.
+- Transparent borderless window rendering.
+- Always-on-top behavior.
+- Drag-to-move and persisted position.
+- Right-click menu open, actions, and blur-close.
+- Local resource discovery from `%USERPROFILE%/.codex/pets` and `CODEX_HOME/pets`.
+- Multi-display placement.
+- Screen-edge pet/menu positioning.
 
 ## Roadmap Summary
 

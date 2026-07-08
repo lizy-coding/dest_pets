@@ -6,6 +6,14 @@
 
 - Polished the auxiliary right-click menu with a compact pet/status header, current scale display, and clearer status/error messaging.
 - Removed the unimplemented Settings menu entry until a focused v0.2 settings surface exists.
+- Centralized desktop platform capability checks in the desktop layer.
+- Hardened main and auxiliary window placement against screen API failures.
+- Documented the Windows validation checklist without changing the supported release target.
+
+### Added
+
+- Structured local pet resource discovery reports for ignored invalid resources.
+- Testable local pets directory resolution for `CODEX_HOME`, macOS/Linux `HOME`, and Windows `USERPROFILE`.
 
 ## 0.1.1 - 2026-07-05
 

@@ -19,6 +19,11 @@ What works:
 - Menu actions for pet switching, scale controls, always-on-top, resource refresh, reset config, recovery, and quit.
 - Context menu anchoring from the real cursor screen position.
 - Context menu visible-area clamp in `AuxiliaryWindowBootstrap`.
+- Main pet window placement has display lookup fallback and clamps persisted positions to the primary visible display.
+- Auxiliary context menu placement has display lookup fallback and stays inside visible display bounds when display APIs work.
+- Desktop platform capability checks are centralized through `PlatformCapabilities`.
+- Local pet directory resolution is testable: `CODEX_HOME/pets` first, then platform home fallback (`HOME` on macOS/Linux, `USERPROFILE` on Windows).
+- Repository discovery exposes structured ignored-resource reports while runtime loading still returns only valid resources.
 - Automated tests for model parsing, repository discovery, settings persistence, controller state, menu actions, and cursor anchoring.
 - DMG packaging with ad-hoc signing through `scripts/package_dmg.sh`.
 
@@ -26,7 +31,7 @@ Known limitations:
 
 - Right-click menu visuals are basic.
 - No full settings surface yet.
-- Local resource validation failures are only ignored, not reported to the user.
+- Local resource validation failures are reported in the repository layer but are not surfaced to the user yet.
 - Only `idle` animation is used by runtime behavior.
 - App has no production icon, Developer ID signing, or notarization.
 - Windows support is scaffolded but not yet fully validated.
@@ -66,12 +71,15 @@ Completed in `v0.1.1`:
 - Fix context menu anchoring by using the cursor screen position.
 - Add menu actions for refresh, reset, recovery, always-on-top, and quit.
 - Add tests for auxiliary menu action flow and cursor anchoring.
+- Keep the removed settings entry out of the v0.1.x menu until a focused v0.2 surface is implemented.
+- Add documented manual smoke coverage notes for multi-display and screen-edge menu positioning.
+- Add test seams and automated fallback coverage for display lookup failure in main and auxiliary window placement.
+- Centralize desktop platform capability checks in `lib/desktop/platform_capabilities.dart`.
+- Remove the unimplemented `settingsPanel` auxiliary window protocol branch.
 
 Remaining tasks:
 
-- Add manual smoke coverage notes for multi-display and screen-edge menu positioning.
 - Run and record manual smoke coverage for multi-display and screen-edge menu positioning.
-- Keep the removed settings entry out of the v0.1.x menu until a focused v0.2 surface is implemented.
 
 Exit criteria:
 
@@ -112,11 +120,20 @@ Goal: make local pet resources understandable and debuggable.
 
 Tasks:
 
-- Return structured validation results for ignored local resources.
+- Use the existing structured validation results for ignored local resources.
 - Surface invalid resource reasons in a compact UI.
 - Add resource metadata preview where useful.
 - Keep bundled resource failure strict.
 - Consider zip/import only after validation reporting exists.
+
+Already available before v0.3 UI work:
+
+- `PetResourceDiscoveryResult` separates valid runtime resources from ignored resource reports.
+- `PetResourceValidationReport` records ignored directory path, optional resource id, severity, reason code, and message.
+- `PetResourceRepository.loadAvailableResources()` still returns only valid resources.
+- `PetResourceRepository.loadAvailableResourcesWithReports()` and `discoverLocalResourcesWithReports()` provide the report-bearing API for future UI.
+- Invalid local resources do not enter runtime resources.
+- Tests cover valid local resources, missing manifest, missing spritesheet, unsafe path, legacy fields, missing atlas, and missing `idle`.
 
 Implementation rules:
 
@@ -167,9 +184,16 @@ Candidate tasks:
 - App icon.
 - Better bundle metadata.
 - Optional menu-bar or dock behavior decision.
-- Better window placement defaults.
-- Improved multi-display behavior tests or documented manual test matrix.
-- Crash-free behavior when screen/display APIs fail.
+- Better window placement defaults beyond the current lower-right primary-display default.
+- Run and record the documented multi-display manual test matrix.
+- Continue hardening crash-free behavior when new screen/display API usage is introduced.
+
+Already available:
+
+- Main window default placement falls back to a safe position if primary display lookup fails.
+- Persisted main window positions are clamped to the primary visible display when display data is available.
+- Auxiliary menu display lookup falls back instead of failing startup/menu creation.
+- Automated tests cover these fallback seams.
 
 Implementation rules:
 
@@ -186,14 +210,22 @@ Exit criteria:
 
 Goal: validate the Windows desktop integration scaffold and make Windows a supported target.
 
-Tasks:
+Remaining tasks:
 
-- Create `windows/` native project scaffold.
-- Implement `WindowsWindowBootstrap` extending `DesktopWindowBootstrap`.
-- Decouple `DesktopWindowController` from `MacosWindowBootstrap` through the `WindowBootstrap` abstraction.
-- Move platform dispatch to `main.dart`.
-- Fix local resource path resolution for Windows (`%USERPROFILE%` fallback).
-- Create Windows packaging script (`scripts/package_windows.bat`).
+- Validate Windows behavior on a Windows host before marking Windows supported.
+- Run the Windows release build.
+- Run the Windows packaging script.
+- Record manual Windows smoke results for the checklist below.
+- Fix only issues observed during Windows validation; do not add unverified Windows-only behavior speculatively.
+
+Already scaffolded before validation:
+
+- Windows native project files exist.
+- `WindowsWindowBootstrap` extends `DesktopWindowBootstrap`.
+- `DesktopWindowController` depends on the injected `WindowBootstrap` abstraction and has no static `Platform` branch.
+- Top-level bootstrap selection lives in `main.dart`.
+- Local pet directory resolution supports `USERPROFILE` fallback on Windows.
+- `scripts/package_windows.bat` exists.
 
 Implementation rules:
 
@@ -208,6 +240,9 @@ Exit criteria:
 - `flutter analyze` and `flutter test` pass on macOS.
 - Windows build configuration and packaging script are ready for validation.
 - Architecture decoupling is verified: `DesktopWindowController` has no static `Platform` branch.
+- On a Windows host, `flutter build windows --release` passes.
+- On a Windows host, `scripts\package_windows.bat` produces the expected zip.
+- Manual Windows smoke test covers launch, transparent/frameless rendering, always-on-top, drag, right-click menu, blur-close, local resource paths, multi-display, and screen-edge positioning.
 
 ### v1.0.0 - Distributable Desktop App
 
