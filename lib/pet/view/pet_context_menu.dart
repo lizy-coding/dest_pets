@@ -106,13 +106,6 @@ class PetContextMenu extends StatelessWidget {
                   ),
                 ),
                 _MenuItem(
-                  icon: Icons.settings,
-                  label: 'Settings...',
-                  onTap: () => onAction(
-                    const PetMenuAction(PetMenuActionType.openSettings),
-                  ),
-                ),
-                _MenuItem(
                   icon: Icons.sync,
                   label: 'Refresh resources',
                   onTap: () => onAction(

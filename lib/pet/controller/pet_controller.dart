@@ -209,14 +209,6 @@ class PetController extends ChangeNotifier {
     await _settingsStore.saveConfig(config);
   }
 
-  Future<void> openSettings() async {
-    _setState(_state.copyWith(isSettingsOpen: true));
-  }
-
-  Future<void> closeSettings() async {
-    _setState(_state.copyWith(isSettingsOpen: false));
-  }
-
   Future<void> recoverFromError() async {
     await initialize();
   }

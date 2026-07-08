@@ -138,8 +138,6 @@ class _PetMenuActionBindingState extends State<_PetMenuActionBinding> {
         final value = !controller.state.config.alwaysOnTop;
         await controller.setAlwaysOnTop(value);
         await widget.windowController.setAlwaysOnTop(value);
-      case PetMenuActionType.openSettings:
-        await controller.openSettings();
       case PetMenuActionType.refreshResources:
         await controller.refreshResources();
       case PetMenuActionType.resetConfig:

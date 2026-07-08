@@ -4,7 +4,6 @@ enum PetMenuActionType {
   decreaseScale,
   resetScale,
   toggleAlwaysOnTop,
-  openSettings,
   refreshResources,
   resetConfig,
   recoverFromError,

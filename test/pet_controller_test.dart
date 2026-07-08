@@ -248,20 +248,6 @@ void main() {
     expect(controller.state.config, const PetConfig());
   });
 
-  test('openSettings and closeSettings update state', () async {
-    final controller = PetController(
-      resourceRepository: FakePetResourceRepository([bundledResource]),
-      settingsStore: FakeSettingsStore(),
-    );
-    addTearDown(controller.dispose);
-
-    await controller.openSettings();
-    expect(controller.state.isSettingsOpen, isTrue);
-
-    await controller.closeSettings();
-    expect(controller.state.isSettingsOpen, isFalse);
-  });
-
   test('startDragging and endDragging update mode and save position', () async {
     final store = FakeSettingsStore();
     final controller = PetController(

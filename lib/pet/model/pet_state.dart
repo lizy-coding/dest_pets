@@ -10,7 +10,6 @@ class PetState {
     List<PetResource> availableResources = const [],
     this.runtimeMode = PetRuntimeMode.initializing,
     this.animationState = const PetAnimationState(),
-    this.isSettingsOpen = false,
     this.errorMessage,
   }) : availableResources = List.unmodifiable(availableResources);
 
@@ -19,7 +18,6 @@ class PetState {
   final List<PetResource> availableResources;
   final PetRuntimeMode runtimeMode;
   final PetAnimationState animationState;
-  final bool isSettingsOpen;
   final String? errorMessage;
 
   PetState copyWith({
@@ -28,7 +26,6 @@ class PetState {
     List<PetResource>? availableResources,
     PetRuntimeMode? runtimeMode,
     PetAnimationState? animationState,
-    bool? isSettingsOpen,
     Object? errorMessage = _unset,
   }) {
     return PetState(
@@ -39,7 +36,6 @@ class PetState {
       availableResources: availableResources ?? this.availableResources,
       runtimeMode: runtimeMode ?? this.runtimeMode,
       animationState: animationState ?? this.animationState,
-      isSettingsOpen: isSettingsOpen ?? this.isSettingsOpen,
       errorMessage: identical(errorMessage, _unset)
           ? this.errorMessage
           : errorMessage as String?,

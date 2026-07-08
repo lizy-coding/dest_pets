@@ -33,7 +33,6 @@ class FakePetController extends PetController {
   int increaseCalls = 0;
   int decreaseCalls = 0;
   int resetCalls = 0;
-  int openSettingsCalls = 0;
   int refreshResourcesCalls = 0;
   int resetConfigCalls = 0;
   int recoverFromErrorCalls = 0;
@@ -71,12 +70,6 @@ class FakePetController extends PetController {
     testState = testState.copyWith(
       config: testState.config.copyWith(alwaysOnTop: value),
     );
-  }
-
-  @override
-  Future<void> openSettings() async {
-    openSettingsCalls += 1;
-    testState = testState.copyWith(isSettingsOpen: true);
   }
 
   @override
