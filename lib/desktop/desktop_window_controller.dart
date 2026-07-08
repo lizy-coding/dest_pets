@@ -1,6 +1,3 @@
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -9,28 +6,20 @@ import 'platform_capabilities.dart';
 import 'window_bootstrap.dart';
 
 class DesktopWindowController with WindowListener implements PetWindowService {
-  DesktopWindowController({this.windowBootstrap});
+  DesktopWindowController({
+    this.windowBootstrap,
+    PlatformCapabilities? capabilities,
+  }) : _capabilities = capabilities ?? PlatformCapabilities.current();
 
   final WindowBootstrap? windowBootstrap;
+  final PlatformCapabilities _capabilities;
   bool _initialized = false;
 
   bool get supportsNativeWindowControl =>
-      !kIsWeb && (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
+      _capabilities.supportsNativeWindowControl;
 
   @override
-  PlatformCapabilities get capabilities {
-    if (!supportsNativeWindowControl) {
-      return const PlatformCapabilities.none();
-    }
-
-    return PlatformCapabilities(
-      supportsTransparency: Platform.isMacOS || Platform.isWindows,
-      supportsClickThrough: Platform.isMacOS || Platform.isWindows,
-      supportsTray: Platform.isMacOS || Platform.isWindows || Platform.isLinux,
-      supportsLaunchAtStartup: Platform.isMacOS || Platform.isWindows,
-      supportsGlobalShortcut: false,
-    );
-  }
+  PlatformCapabilities get capabilities => _capabilities;
 
   @override
   Future<void> initialize() async {

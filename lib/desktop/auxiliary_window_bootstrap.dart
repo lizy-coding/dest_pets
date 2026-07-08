@@ -1,24 +1,41 @@
-import 'dart:io';
-
 import 'package:desktop_multi_window/desktop_multi_window.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'auxiliary_window_arguments.dart';
+import 'platform_capabilities.dart';
+
+typedef AllDisplaysProvider = Future<List<Display>> Function();
+typedef AuxiliaryPrimaryDisplayProvider = Future<Display> Function();
 
 class AuxiliaryWindowBootstrap {
-  AuxiliaryWindowBootstrap({required this.currentWindowController});
+  AuxiliaryWindowBootstrap({
+    required this.currentWindowController,
+    PlatformCapabilities? capabilities,
+    @visibleForTesting AllDisplaysProvider? allDisplaysProvider,
+    @visibleForTesting AuxiliaryPrimaryDisplayProvider? primaryDisplayProvider,
+  }) : _capabilities = capabilities ?? PlatformCapabilities.current(),
+       _allDisplaysProvider =
+           allDisplaysProvider ?? screenRetriever.getAllDisplays,
+       _primaryDisplayProvider =
+           primaryDisplayProvider ?? screenRetriever.getPrimaryDisplay;
 
   static const Size contextMenuSize = Size(280, 420);
   static const double _screenMargin = 8;
+  static const Offset fallbackContextMenuPosition = Offset(
+    _screenMargin,
+    _screenMargin,
+  );
 
   final WindowController currentWindowController;
+  final PlatformCapabilities _capabilities;
+  final AllDisplaysProvider _allDisplaysProvider;
+  final AuxiliaryPrimaryDisplayProvider _primaryDisplayProvider;
 
   bool get supportsNativeWindowControl =>
-      !kIsWeb && (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
+      _capabilities.supportsNativeWindowControl;
 
   Future<void> initialize(AuxiliaryWindowArguments arguments) async {
     if (!supportsNativeWindowControl) {
@@ -56,7 +73,7 @@ class AuxiliaryWindowBootstrap {
     await windowManager.setHasShadow(false);
     await windowManager.setBackgroundColor(Colors.transparent);
     await windowManager.setPosition(
-      await _contextMenuPosition(arguments.anchorGlobalPosition),
+      await contextMenuPosition(arguments.anchorGlobalPosition),
     );
     await windowManager.show();
     await windowManager.focus();
@@ -73,8 +90,13 @@ class AuxiliaryWindowBootstrap {
     });
   }
 
-  Future<Offset> _contextMenuPosition(Offset anchor) async {
+  @visibleForTesting
+  Future<Offset> contextMenuPosition(Offset anchor) async {
     final display = await _displayForAnchor(anchor);
+    if (display == null) {
+      return fallbackContextMenuPosition;
+    }
+
     final visiblePosition = display.visiblePosition ?? Offset.zero;
     final visibleSize = display.visibleSize ?? display.size;
     final minX = visiblePosition.dx + _screenMargin;
@@ -96,8 +118,8 @@ class AuxiliaryWindowBootstrap {
     );
   }
 
-  Future<Display> _displayForAnchor(Offset anchor) async {
-    final displays = await screenRetriever.getAllDisplays();
+  Future<Display?> _displayForAnchor(Offset anchor) async {
+    final displays = await _safeAllDisplays();
     for (final display in displays) {
       final visiblePosition = display.visiblePosition ?? Offset.zero;
       final visibleSize = display.visibleSize ?? display.size;
@@ -107,6 +129,22 @@ class AuxiliaryWindowBootstrap {
       }
     }
 
-    return screenRetriever.getPrimaryDisplay();
+    return _safePrimaryDisplay();
+  }
+
+  Future<List<Display>> _safeAllDisplays() async {
+    try {
+      return await _allDisplaysProvider();
+    } on Object {
+      return const [];
+    }
+  }
+
+  Future<Display?> _safePrimaryDisplay() async {
+    try {
+      return await _primaryDisplayProvider();
+    } on Object {
+      return null;
+    }
   }
 }

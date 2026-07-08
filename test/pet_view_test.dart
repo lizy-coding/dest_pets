@@ -105,6 +105,9 @@ class FakeDesktopWindowController extends DesktopWindowController {
   @override
   PlatformCapabilities get capabilities {
     return const PlatformCapabilities(
+      platform: DesktopPlatform.macos,
+      supportsNativeWindowControl: true,
+      supportsAuxiliaryWindows: true,
       supportsTransparency: true,
       supportsClickThrough: false,
       supportsTray: false,
