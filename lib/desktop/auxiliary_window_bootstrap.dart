@@ -31,8 +31,6 @@ class AuxiliaryWindowBootstrap {
     switch (arguments.type) {
       case AuxiliaryWindowType.contextMenu:
         await _initializeContextMenu(arguments);
-      case AuxiliaryWindowType.settingsPanel:
-        throw UnimplementedError('Settings panel window is not implemented.');
     }
   }
 

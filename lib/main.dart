@@ -71,7 +71,5 @@ Future<void> _runAuxiliaryWindow(
   switch (arguments.type) {
     case AuxiliaryWindowType.contextMenu:
       runApp(PetMenuWindowApp(snapshot: arguments.snapshot!));
-    case AuxiliaryWindowType.settingsPanel:
-      throw UnimplementedError('Settings panel window is not implemented.');
   }
 }
