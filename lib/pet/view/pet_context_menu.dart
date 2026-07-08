@@ -19,33 +19,41 @@ class PetContextMenu extends StatelessWidget {
     final canUsePetCommands =
         snapshot.runtimeMode != PetRuntimeMode.error &&
         snapshot.resourceOptions.isNotEmpty;
+    final selectedResource = _selectedResourceLabel(snapshot);
+    final status = _statusText(snapshot.runtimeMode);
 
     return Material(
       color: Colors.transparent,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: const Color(0xF2FFFFFF),
+          color: const Color(0xF7FFFFFF),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0x22000000)),
+          border: Border.all(color: const Color(0x1F111827)),
           boxShadow: const [
             BoxShadow(
               blurRadius: 24,
               offset: Offset(0, 10),
-              color: Color(0x33000000),
+              color: Color(0x2E111827),
             ),
           ],
         ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minWidth: 236, maxWidth: 280),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                _MenuHeader(
+                  title: selectedResource ?? snapshot.petId,
+                  status: status,
+                  hasError: snapshot.hasError,
+                ),
                 if (snapshot.hasError) ...[
-                  _MenuLabel(
+                  _MenuMessage(
                     text: snapshot.errorMessage ?? 'Pet failed to load.',
+                    isError: true,
                   ),
                   _MenuItem(
                     icon: Icons.refresh,
@@ -55,6 +63,12 @@ class PetContextMenu extends StatelessWidget {
                     ),
                   ),
                   const _MenuDivider(),
+                ] else ...[
+                  _MenuMessage(
+                    text:
+                        '${snapshot.resourceOptions.length} resource'
+                        '${snapshot.resourceOptions.length == 1 ? '' : 's'} available',
+                  ),
                 ],
                 for (final resource in snapshot.resourceOptions)
                   _MenuItem(
@@ -73,6 +87,7 @@ class PetContextMenu extends StatelessWidget {
                 _MenuItem(
                   icon: Icons.add,
                   label: 'Increase size',
+                  trailing: _scaleLabel(snapshot.scale),
                   enabled: canUsePetCommands,
                   onTap: () => onAction(
                     const PetMenuAction(PetMenuActionType.increaseScale),
@@ -135,6 +150,96 @@ class PetContextMenu extends StatelessWidget {
   }
 }
 
+String _statusText(PetRuntimeMode mode) {
+  return switch (mode) {
+    PetRuntimeMode.initializing => 'Starting',
+    PetRuntimeMode.idle => 'Ready',
+    PetRuntimeMode.dragging => 'Moving',
+    PetRuntimeMode.switchingResource => 'Switching',
+    PetRuntimeMode.error => 'Needs recovery',
+  };
+}
+
+String _scaleLabel(double scale) {
+  return '${(scale * 100).round()}%';
+}
+
+String? _selectedResourceLabel(PetSettingsSnapshot snapshot) {
+  for (final resource in snapshot.resourceOptions) {
+    if (resource.selected) {
+      return resource.label;
+    }
+  }
+
+  return null;
+}
+
+class _MenuHeader extends StatelessWidget {
+  const _MenuHeader({
+    required this.title,
+    required this.status,
+    required this.hasError,
+  });
+
+  final String title;
+  final String status;
+  final bool hasError;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = hasError
+        ? const Color(0xFFB91C1C)
+        : const Color(0xFF047857);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      child: Row(
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.11),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: statusColor.withValues(alpha: 0.18)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(7),
+              child: Icon(Icons.pets, size: 17, color: statusColor),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF111827),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  status,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _MenuItem extends StatelessWidget {
   const _MenuItem({
     required this.icon,
@@ -157,6 +262,7 @@ class _MenuItem extends StatelessWidget {
         : const Color(0xFF9CA3AF);
 
     return InkWell(
+      borderRadius: BorderRadius.circular(6),
       onTap: enabled ? onTap : null,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -177,9 +283,15 @@ class _MenuItem extends StatelessWidget {
             ),
             if (trailing != null) ...[
               const SizedBox(width: 12),
-              Text(
-                trailing!,
-                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
+              Flexible(
+                child: Text(
+                  trailing!,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF6B7280),
+                    fontSize: 12,
+                  ),
+                ),
               ),
             ],
           ],
@@ -194,24 +306,50 @@ class _MenuDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Divider(height: 9, thickness: 1, color: Color(0xFFE5E7EB));
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 4),
+      child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
+    );
   }
 }
 
-class _MenuLabel extends StatelessWidget {
-  const _MenuLabel({required this.text});
+class _MenuMessage extends StatelessWidget {
+  const _MenuMessage({required this.text, this.isError = false});
 
   final String text;
+  final bool isError;
 
   @override
   Widget build(BuildContext context) {
+    final foreground = isError
+        ? const Color(0xFFB91C1C)
+        : const Color(0xFF4B5563);
+    final background = isError
+        ? const Color(0xFFFFF1F2)
+        : const Color(0xFFF9FAFB);
+    final border = isError ? const Color(0xFFFECACA) : const Color(0xFFE5E7EB);
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
-      child: Text(
-        text,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 12),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: border),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+          child: Text(
+            text,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: foreground,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
       ),
     );
   }

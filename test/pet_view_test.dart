@@ -295,6 +295,8 @@ void main() {
     await tester.tap(find.text('Recover'));
 
     expect(actions[0].type, PetMenuActionType.recoverFromError);
+    expect(find.text('Needs recovery'), findsOneWidget);
+    expect(find.text('load failed'), findsOneWidget);
   });
 
   testWidgets('context menu emits switch action in idle state', (tester) async {
@@ -320,6 +322,10 @@ void main() {
 
     expect(actions.single.type, PetMenuActionType.switchPet);
     expect(actions.single.petId, 'local_pet');
+    expect(find.text('Ready'), findsOneWidget);
+    expect(find.text('2 resources available'), findsOneWidget);
+    expect(find.text('100%'), findsOneWidget);
+    expect(find.text('Settings...'), findsNothing);
   });
 
   testWidgets('app handles auxiliary menu actions', (tester) async {
