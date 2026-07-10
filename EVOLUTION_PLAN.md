@@ -4,7 +4,7 @@ This file is the product and architecture guardrail for future work. Keep change
 
 ## Current Baseline
 
-### v0.1.1 Internal macOS Alpha
+### v0.5-stage Internal macOS Alpha Candidate
 
 What works:
 
@@ -17,6 +17,9 @@ What works:
 - Persisted pet id, scale, window position, and always-on-top preference.
 - Auxiliary-window right-click menu.
 - Menu actions for pet switching, scale controls, always-on-top, resource refresh, reset config, recovery, and quit.
+- Compact menu settings surface for current scale, always-on-top, reset config, refresh resources, recovery, and quit.
+- Ignored local resource reasons are surfaced in the compact menu.
+- Runtime animation state uses animation identifiers for idle, dragging, and error states; resources without optional animations fall back to `idle`.
 - Context menu anchoring from the real cursor screen position.
 - Context menu visible-area clamp in `AuxiliaryWindowBootstrap`.
 - Main pet window placement has display lookup fallback and clamps persisted positions to the primary visible display.
@@ -24,16 +27,17 @@ What works:
 - Desktop platform capability checks are centralized through `PlatformCapabilities`.
 - Local pet directory resolution is testable: `CODEX_HOME/pets` first, then platform home fallback (`HOME` on macOS/Linux, `USERPROFILE` on Windows).
 - Repository discovery exposes structured ignored-resource reports while runtime loading still returns only valid resources.
+- macOS bundle metadata includes utility app category and high-resolution capability.
+- macOS app icon assets are project-specific and generated from the bundled pet atlas.
 - Automated tests for model parsing, repository discovery, settings persistence, controller state, menu actions, and cursor anchoring.
 - DMG packaging with ad-hoc signing through `scripts/package_dmg.sh`.
 
 Known limitations:
 
 - Right-click menu visuals are basic.
-- No full settings surface yet.
-- Local resource validation failures are reported in the repository layer but are not surfaced to the user yet.
-- Only `idle` animation is used by runtime behavior.
-- App has no production icon, Developer ID signing, or notarization.
+- No broad settings surface by design; settings remain in the compact right-click menu for v0.x.
+- Only `idle` is required by resources; optional behavior animations are selected by id when present.
+- App has no Developer ID signing or notarization.
 - Windows support is scaffolded but not yet fully validated.
 
 ## Product Direction
@@ -91,6 +95,8 @@ Exit criteria:
 
 Goal: expose current config and recovery paths without creating a broad preferences app.
 
+Status: complete as a compact menu surface.
+
 Allowed scope:
 
 - Small settings panel or compact menu extension.
@@ -118,6 +124,8 @@ Exit criteria:
 
 Goal: make local pet resources understandable and debuggable.
 
+Status: complete for compact menu reporting. Zip/import and richer previews remain future work.
+
 Tasks:
 
 - Use the existing structured validation results for ignored local resources.
@@ -134,6 +142,8 @@ Already available before v0.3 UI work:
 - `PetResourceRepository.loadAvailableResourcesWithReports()` and `discoverLocalResourcesWithReports()` provide the report-bearing API for future UI.
 - Invalid local resources do not enter runtime resources.
 - Tests cover valid local resources, missing manifest, missing spritesheet, unsafe path, legacy fields, missing atlas, and missing `idle`.
+- `PetSettingsSnapshot` carries ignored resource reports to the auxiliary menu window.
+- `PetContextMenu` summarizes ignored resource reasons without allowing invalid resources into runtime state.
 
 Implementation rules:
 
@@ -153,13 +163,20 @@ Exit criteria:
 
 Goal: add pet behavior without weakening renderer boundaries.
 
+Status: complete for minimal behavior-state routing.
+
 Candidate behavior:
 
-- `clicked`
-- `sleep`
-- `walk`
 - `dragging`
 - `error` or recovery animation
+- Future optional behaviors: `clicked`, `sleep`, `walk`
+
+Already available:
+
+- `PetAnimationState` carries an animation id.
+- `PetController` switches to `dragging` and `error` animation ids for matching runtime states.
+- `PetActor` receives only `PetResource` and `PetAnimationState`.
+- `PetActor` falls back to `idle` if a resource does not define the optional animation id.
 
 Implementation rules:
 
@@ -179,10 +196,12 @@ Exit criteria:
 
 Goal: make the macOS utility feel intentional while staying lightweight.
 
+Status: code-complete macOS internal-alpha candidate. Automated release
+verification completed on 2026-07-10; manual smoke evidence and end-user
+distribution hardening remain pending.
+
 Candidate tasks:
 
-- App icon.
-- Better bundle metadata.
 - Optional menu-bar or dock behavior decision.
 - Better window placement defaults beyond the current lower-right primary-display default.
 - Run and record the documented multi-display manual test matrix.
@@ -193,7 +212,19 @@ Already available:
 - Main window default placement falls back to a safe position if primary display lookup fails.
 - Persisted main window positions are clamped to the primary visible display when display data is available.
 - Auxiliary menu display lookup falls back instead of failing startup/menu creation.
+- macOS bundle metadata includes utility category and high-resolution capability.
+- macOS app icon assets are project-specific.
 - Automated tests cover these fallback seams.
+- `dart format lib test`, `flutter analyze`, and `flutter test` pass.
+- macOS debug and release builds pass, and `scripts/package_dmg.sh` produces
+  `dist/Desktop Pet-0.5.0.dmg` with ad-hoc signing.
+
+Remaining before publishing the internal-alpha candidate:
+
+- Run and record the manual macOS smoke matrix, including the multi-display
+  and screen-edge cases.
+- Commit the release source and create the matching version tag so the
+  artifact has a traceable source revision.
 
 Implementation rules:
 
@@ -216,7 +247,20 @@ Remaining tasks:
 - Run the Windows release build.
 - Run the Windows packaging script.
 - Record manual Windows smoke results for the checklist below.
+- Replace the generated `windows/runner/Runner.rc` product metadata and icon
+  before distributing a Windows artifact.
+- Add focused Windows bootstrap/capability tests; current automated coverage
+  exercises shared fakes and `USERPROFILE` resolution, not Windows plugin
+  behavior.
 - Fix only issues observed during Windows validation; do not add unverified Windows-only behavior speculatively.
+
+Current validation status:
+
+- No Windows-host release build, packaged zip, runtime smoke result, or
+  Windows build artifact has been recorded.
+- macOS analysis and unit/widget test results are useful shared-code signals,
+  but do not validate Windows window-manager, screen, or auxiliary-window
+  plugin behavior.
 
 Already scaffolded before validation:
 
@@ -242,6 +286,8 @@ Exit criteria:
 - Architecture decoupling is verified: `DesktopWindowController` has no static `Platform` branch.
 - On a Windows host, `flutter build windows --release` passes.
 - On a Windows host, `scripts\package_windows.bat` produces the expected zip.
+- `windows/runner/Runner.rc` contains the final product identity, copyright,
+  executable naming, and application icon.
 - Manual Windows smoke test covers launch, transparent/frameless rendering, always-on-top, drag, right-click menu, blur-close, local resource paths, multi-display, and screen-edge positioning.
 
 ### v1.0.0 - Distributable Desktop App
