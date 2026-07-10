@@ -15,6 +15,7 @@ import 'package:desktop_pet/pet/view/pet_view.dart';
 import 'package:desktop_pet/resources/data/pet_resource_repository.dart';
 import 'package:desktop_pet/resources/model/pet_manifest.dart';
 import 'package:desktop_pet/resources/model/pet_resource.dart';
+import 'package:desktop_pet/resources/model/pet_resource_discovery_result.dart';
 import 'package:desktop_pet/settings/settings_store.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -216,6 +217,14 @@ void main() {
         config: const PetConfig(scale: 1.25, alwaysOnTop: false),
         resource: bundledResource,
         availableResources: [bundledResource, localResource],
+        ignoredResourceReports: [
+          const PetResourceValidationReport(
+            directoryPath: '/tmp/broken_pet',
+            severity: PetResourceValidationSeverity.warning,
+            reason: PetResourceValidationReason.missingSpritesheet,
+            message: 'Resource spritesheet is missing.',
+          ),
+        ],
       ),
     );
     addTearDown(controller.dispose);
@@ -239,6 +248,10 @@ void main() {
     expect(auxiliaryWindowController.snapshot?.scale, 1.25);
     expect(auxiliaryWindowController.snapshot?.alwaysOnTop, isFalse);
     expect(auxiliaryWindowController.snapshot?.resourceOptions, hasLength(2));
+    expect(
+      auxiliaryWindowController.snapshot?.ignoredResourceReports.single.reason,
+      PetResourceValidationReason.missingSpritesheet,
+    );
     expect(find.byType(PetContextMenu), findsNothing);
   });
 
@@ -329,6 +342,47 @@ void main() {
     expect(find.text('2 resources available'), findsOneWidget);
     expect(find.text('100%'), findsOneWidget);
     expect(find.text('Settings...'), findsNothing);
+  });
+
+  testWidgets('context menu shows ignored resource reasons', (tester) async {
+    final actions = <PetMenuAction>[];
+    final snapshot = PetSettingsSnapshot.fromState(
+      PetState(
+        config: const PetConfig(),
+        resource: bundledResource,
+        availableResources: [bundledResource, localResource],
+        runtimeMode: PetRuntimeMode.idle,
+        ignoredResourceReports: const [
+          PetResourceValidationReport(
+            directoryPath: '/tmp/broken_pet',
+            severity: PetResourceValidationSeverity.warning,
+            reason: PetResourceValidationReason.missingSpritesheet,
+            message: 'Resource spritesheet is missing.',
+          ),
+          PetResourceValidationReport(
+            directoryPath: '/tmp/legacy_pet',
+            severity: PetResourceValidationSeverity.warning,
+            reason: PetResourceValidationReason.invalidManifest,
+            message: 'pet.json is invalid.',
+          ),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PetContextMenu(snapshot: snapshot, onAction: actions.add),
+        ),
+      ),
+    );
+
+    expect(find.text('2 resources available, 2 ignored'), findsOneWidget);
+    expect(find.text('2 ignored resources'), findsOneWidget);
+    expect(find.textContaining('broken_pet'), findsOneWidget);
+    expect(find.textContaining('missing spritesheet'), findsOneWidget);
+    expect(find.textContaining('legacy_pet'), findsOneWidget);
+    expect(find.textContaining('invalid pet.json'), findsOneWidget);
   });
 
   testWidgets('app handles auxiliary menu actions', (tester) async {

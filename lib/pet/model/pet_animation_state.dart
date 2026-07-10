@@ -6,6 +6,8 @@ class PetAnimationState {
   });
 
   static const String idleAnimationId = 'idle';
+  static const String draggingAnimationId = 'dragging';
+  static const String errorAnimationId = 'error';
 
   final String animationId;
   final int frameIndex;

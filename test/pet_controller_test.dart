@@ -1,28 +1,43 @@
 import 'package:desktop_pet/pet/controller/pet_controller.dart';
+import 'package:desktop_pet/pet/model/pet_animation_state.dart';
 import 'package:desktop_pet/pet/model/pet_config.dart';
 import 'package:desktop_pet/pet/model/pet_runtime_mode.dart';
 import 'package:desktop_pet/resources/data/pet_resource_repository.dart';
 import 'package:desktop_pet/resources/model/pet_manifest.dart';
 import 'package:desktop_pet/resources/model/pet_resource.dart';
+import 'package:desktop_pet/resources/model/pet_resource_discovery_result.dart';
 import 'package:desktop_pet/settings/settings_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class FakePetResourceRepository extends PetResourceRepository {
-  FakePetResourceRepository(this.resources, {this.shouldThrow = false})
-    : super(localPetsDirectory: '');
+  FakePetResourceRepository(
+    this.resources, {
+    this.ignoredResources = const [],
+    this.shouldThrow = false,
+  }) : super(localPetsDirectory: '');
 
   List<PetResource> resources;
+  List<PetResourceValidationReport> ignoredResources;
   final bool shouldThrow;
   int loadCalls = 0;
 
   @override
-  Future<List<PetResource>> loadAvailableResources() async {
+  Future<PetResourceDiscoveryResult> loadAvailableResourcesWithReports() async {
     loadCalls += 1;
     if (shouldThrow) {
       throw StateError('load failed');
     }
 
-    return resources;
+    return PetResourceDiscoveryResult(
+      validResources: resources,
+      ignoredResources: ignoredResources,
+    );
+  }
+
+  @override
+  Future<List<PetResource>> loadAvailableResources() async {
+    final result = await loadAvailableResourcesWithReports();
+    return result.validResources;
   }
 }
 
@@ -62,11 +77,17 @@ void main() {
   );
 
   test('initialize enters idle after loading resources', () async {
+    const ignoredReport = PetResourceValidationReport(
+      directoryPath: '/tmp/broken',
+      severity: PetResourceValidationSeverity.warning,
+      reason: PetResourceValidationReason.invalidManifest,
+      message: 'pet.json is invalid.',
+    );
     final controller = PetController(
-      resourceRepository: FakePetResourceRepository([
-        bundledResource,
-        localResource,
-      ]),
+      resourceRepository: FakePetResourceRepository(
+        [bundledResource, localResource],
+        ignoredResources: const [ignoredReport],
+      ),
       settingsStore: FakeSettingsStore(),
     );
     addTearDown(controller.dispose);
@@ -79,6 +100,7 @@ void main() {
       bundledResource,
       localResource,
     ]);
+    expect(controller.state.ignoredResourceReports, const [ignoredReport]);
   });
 
   test('initialize enters error when resources fail to load', () async {
@@ -94,6 +116,10 @@ void main() {
     await controller.initialize();
 
     expect(controller.state.runtimeMode, PetRuntimeMode.error);
+    expect(
+      controller.state.animationState.animationId,
+      PetAnimationState.errorAnimationId,
+    );
     expect(controller.state.errorMessage, contains('load failed'));
   });
 
@@ -259,10 +285,18 @@ void main() {
 
     controller.startDragging();
     expect(controller.state.runtimeMode, PetRuntimeMode.dragging);
+    expect(
+      controller.state.animationState.animationId,
+      PetAnimationState.draggingAnimationId,
+    );
 
     await controller.endDragging(const Offset(10, 20));
 
     expect(controller.state.runtimeMode, PetRuntimeMode.idle);
+    expect(
+      controller.state.animationState.animationId,
+      PetAnimationState.idleAnimationId,
+    );
     expect(controller.state.config.windowPosition, const Offset(10, 20));
     expect(store.config?.windowPosition, const Offset(10, 20));
   });

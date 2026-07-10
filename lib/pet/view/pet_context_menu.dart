@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../model/pet_menu_action.dart';
 import '../model/pet_runtime_mode.dart';
 import '../model/pet_settings_snapshot.dart';
+import '../../resources/model/pet_resource_discovery_result.dart';
 
 class PetContextMenu extends StatelessWidget {
   const PetContextMenu({
@@ -38,116 +39,135 @@ class PetContextMenu extends StatelessWidget {
           ],
         ),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 236, maxWidth: 280),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _MenuHeader(
-                  title: selectedResource ?? snapshot.petId,
-                  status: status,
-                  hasError: snapshot.hasError,
-                ),
-                if (snapshot.hasError) ...[
-                  _MenuMessage(
-                    text: snapshot.errorMessage ?? 'Pet failed to load.',
-                    isError: true,
+          constraints: const BoxConstraints(
+            minWidth: 236,
+            maxWidth: 280,
+            maxHeight: 420,
+          ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _MenuHeader(
+                    title: selectedResource ?? snapshot.petId,
+                    status: status,
+                    hasError: snapshot.hasError,
+                  ),
+                  if (snapshot.hasError) ...[
+                    _MenuMessage(
+                      text: snapshot.errorMessage ?? 'Pet failed to load.',
+                      isError: true,
+                    ),
+                    _MenuItem(
+                      icon: Icons.refresh,
+                      label: 'Recover',
+                      onTap: () => onAction(
+                        const PetMenuAction(PetMenuActionType.recoverFromError),
+                      ),
+                    ),
+                    const _MenuDivider(),
+                  ] else ...[
+                    _MenuMessage(text: _resourceSummary(snapshot)),
+                  ],
+                  for (final resource in snapshot.resourceOptions)
+                    _MenuItem(
+                      icon: resource.selected ? Icons.check : Icons.pets,
+                      label: resource.label,
+                      trailing: resource.sourceLabel,
+                      enabled: canUsePetCommands && !resource.selected,
+                      onTap: () => onAction(
+                        PetMenuAction(
+                          PetMenuActionType.switchPet,
+                          petId: resource.id,
+                        ),
+                      ),
+                    ),
+                  if (snapshot.ignoredResourceReports.isNotEmpty) ...[
+                    const _MenuDivider(),
+                    _IgnoredResourceSection(
+                      reports: snapshot.ignoredResourceReports,
+                    ),
+                  ],
+                  if (snapshot.resourceOptions.isNotEmpty) const _MenuDivider(),
+                  _MenuItem(
+                    icon: Icons.add,
+                    label: 'Increase size',
+                    trailing: _scaleLabel(snapshot.scale),
+                    enabled: canUsePetCommands,
+                    onTap: () => onAction(
+                      const PetMenuAction(PetMenuActionType.increaseScale),
+                    ),
                   ),
                   _MenuItem(
-                    icon: Icons.refresh,
-                    label: 'Recover',
+                    icon: Icons.remove,
+                    label: 'Decrease size',
+                    enabled: canUsePetCommands,
                     onTap: () => onAction(
-                      const PetMenuAction(PetMenuActionType.recoverFromError),
+                      const PetMenuAction(PetMenuActionType.decreaseScale),
+                    ),
+                  ),
+                  _MenuItem(
+                    icon: Icons.restart_alt,
+                    label: 'Reset size',
+                    enabled: canUsePetCommands,
+                    onTap: () => onAction(
+                      const PetMenuAction(PetMenuActionType.resetScale),
                     ),
                   ),
                   const _MenuDivider(),
-                ] else ...[
-                  _MenuMessage(
-                    text:
-                        '${snapshot.resourceOptions.length} resource'
-                        '${snapshot.resourceOptions.length == 1 ? '' : 's'} available',
-                  ),
-                ],
-                for (final resource in snapshot.resourceOptions)
                   _MenuItem(
-                    icon: resource.selected ? Icons.check : Icons.pets,
-                    label: resource.label,
-                    trailing: resource.sourceLabel,
-                    enabled: canUsePetCommands && !resource.selected,
+                    icon: snapshot.alwaysOnTop
+                        ? Icons.push_pin
+                        : Icons.push_pin_outlined,
+                    label: 'Always on top',
+                    trailing: snapshot.alwaysOnTop ? 'On' : 'Off',
                     onTap: () => onAction(
-                      PetMenuAction(
-                        PetMenuActionType.switchPet,
-                        petId: resource.id,
-                      ),
+                      const PetMenuAction(PetMenuActionType.toggleAlwaysOnTop),
                     ),
                   ),
-                if (snapshot.resourceOptions.isNotEmpty) const _MenuDivider(),
-                _MenuItem(
-                  icon: Icons.add,
-                  label: 'Increase size',
-                  trailing: _scaleLabel(snapshot.scale),
-                  enabled: canUsePetCommands,
-                  onTap: () => onAction(
-                    const PetMenuAction(PetMenuActionType.increaseScale),
+                  _MenuItem(
+                    icon: Icons.sync,
+                    label: 'Refresh resources',
+                    onTap: () => onAction(
+                      const PetMenuAction(PetMenuActionType.refreshResources),
+                    ),
                   ),
-                ),
-                _MenuItem(
-                  icon: Icons.remove,
-                  label: 'Decrease size',
-                  enabled: canUsePetCommands,
-                  onTap: () => onAction(
-                    const PetMenuAction(PetMenuActionType.decreaseScale),
+                  _MenuItem(
+                    icon: Icons.restore,
+                    label: 'Reset config',
+                    onTap: () => onAction(
+                      const PetMenuAction(PetMenuActionType.resetConfig),
+                    ),
                   ),
-                ),
-                _MenuItem(
-                  icon: Icons.restart_alt,
-                  label: 'Reset size',
-                  enabled: canUsePetCommands,
-                  onTap: () => onAction(
-                    const PetMenuAction(PetMenuActionType.resetScale),
+                  const _MenuDivider(),
+                  _MenuItem(
+                    icon: Icons.close,
+                    label: 'Quit',
+                    onTap: () =>
+                        onAction(const PetMenuAction(PetMenuActionType.quit)),
                   ),
-                ),
-                const _MenuDivider(),
-                _MenuItem(
-                  icon: snapshot.alwaysOnTop
-                      ? Icons.push_pin
-                      : Icons.push_pin_outlined,
-                  label: 'Always on top',
-                  trailing: snapshot.alwaysOnTop ? 'On' : 'Off',
-                  onTap: () => onAction(
-                    const PetMenuAction(PetMenuActionType.toggleAlwaysOnTop),
-                  ),
-                ),
-                _MenuItem(
-                  icon: Icons.sync,
-                  label: 'Refresh resources',
-                  onTap: () => onAction(
-                    const PetMenuAction(PetMenuActionType.refreshResources),
-                  ),
-                ),
-                _MenuItem(
-                  icon: Icons.restore,
-                  label: 'Reset config',
-                  onTap: () => onAction(
-                    const PetMenuAction(PetMenuActionType.resetConfig),
-                  ),
-                ),
-                const _MenuDivider(),
-                _MenuItem(
-                  icon: Icons.close,
-                  label: 'Quit',
-                  onTap: () =>
-                      onAction(const PetMenuAction(PetMenuActionType.quit)),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
+}
+
+String _resourceSummary(PetSettingsSnapshot snapshot) {
+  final validCount = snapshot.resourceOptions.length;
+  final ignoredCount = snapshot.ignoredResourceReports.length;
+  final validLabel = '$validCount resource${validCount == 1 ? '' : 's'}';
+  if (ignoredCount == 0) {
+    return '$validLabel available';
+  }
+
+  return '$validLabel available, $ignoredCount ignored';
 }
 
 String _statusText(PetRuntimeMode mode) {
@@ -311,6 +331,95 @@ class _MenuDivider extends StatelessWidget {
       child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
     );
   }
+}
+
+class _IgnoredResourceSection extends StatelessWidget {
+  const _IgnoredResourceSection({required this.reports});
+
+  final List<PetResourceValidationReport> reports;
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleReports = reports.take(3).toList(growable: false);
+    final remainingCount = reports.length - visibleReports.length;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 2),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFBEB),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: const Color(0xFFFDE68A)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${reports.length} ignored resource'
+                '${reports.length == 1 ? '' : 's'}',
+                style: const TextStyle(
+                  color: Color(0xFF92400E),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 5),
+              for (final report in visibleReports)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: Text(
+                    '${_resourceDirectoryName(report.directoryPath)}: '
+                    '${_reasonLabel(report.reason)}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF78350F),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              if (remainingCount > 0)
+                Text(
+                  '+$remainingCount more',
+                  style: const TextStyle(
+                    color: Color(0xFF92400E),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _resourceDirectoryName(String path) {
+  final normalized = path.replaceAll(r'\', '/');
+  final segments = normalized
+      .split('/')
+      .where((segment) => segment.isNotEmpty)
+      .toList(growable: false);
+  if (segments.isEmpty) {
+    return path;
+  }
+
+  return segments.last;
+}
+
+String _reasonLabel(PetResourceValidationReason reason) {
+  return switch (reason) {
+    PetResourceValidationReason.missingManifest => 'missing pet.json',
+    PetResourceValidationReason.invalidManifest => 'invalid pet.json',
+    PetResourceValidationReason.missingSpritesheet => 'missing spritesheet',
+    PetResourceValidationReason.unreadableResource => 'unreadable files',
+    PetResourceValidationReason.unreadableDirectory => 'unreadable pets folder',
+  };
 }
 
 class _MenuMessage extends StatelessWidget {
