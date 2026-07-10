@@ -1,5 +1,56 @@
 # Release Notes
 
+## v0.5.0
+
+Date: 2026-07-08
+
+Type: macOS internal alpha candidate.
+
+### Scope
+
+This candidate completes the planned v0.2-v0.5 architecture and UX polish that can be validated on macOS without claiming Windows support:
+
+- Keeps settings controls in the compact auxiliary right-click menu rather than adding a broad settings page.
+- Shows ignored local resource reasons in the menu while keeping invalid resources out of runtime state.
+- Routes behavior animation state through animation ids for dragging and error states, with `idle` fallback for resources that only define `idle`.
+- Keeps desktop platform capability checks centralized in the desktop layer.
+- Keeps main and auxiliary window placement guarded against display API failures.
+- Adds macOS utility-category bundle metadata.
+- Adds app-specific macOS icon assets.
+
+### Manual Smoke Test
+
+Run before publishing a v0.5 artifact:
+
+- Launch the app, drag the pet, quit, and relaunch to confirm position persistence.
+- Open the menu near each screen edge and confirm it stays inside the visible display area.
+- On multi-display setups, right-click on each display and confirm the menu opens on the corresponding display.
+- Click away from the menu and confirm auxiliary window blur closes it.
+- Switch to a valid local resource, refresh resources, then switch back to the bundled resource.
+- Add an invalid local resource and confirm the menu summarizes why it was ignored.
+- Toggle always-on-top, change scale, reset scale, reset config, and recover from an induced error.
+
+### Verification Commands
+
+Run before publishing artifacts:
+
+```sh
+dart format lib test
+flutter analyze
+flutter test
+flutter build macos --debug
+flutter build macos --release
+bash scripts/package_dmg.sh
+```
+
+### Publishing Notes
+
+Do not mark Windows supported from this candidate. Windows still requires host validation with `flutter build windows --release`, `scripts\package_windows.bat`, and manual smoke coverage.
+
+This candidate is still not Developer ID signed or notarized.
+
+Expected macOS desktop behavior: the main pet window remains a normal Dock app window, is transparent and borderless, defaults to always-on-top, is visible across Spaces, and uses a temporary auxiliary window for the right-click menu that closes on blur.
+
 ## v0.1.1
 
 Date: 2026-07-05

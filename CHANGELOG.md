@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 - 2026-07-08
 
 ### Changed
 
@@ -9,11 +9,16 @@
 - Centralized desktop platform capability checks in the desktop layer.
 - Hardened main and auxiliary window placement against screen API failures.
 - Documented the Windows validation checklist without changing the supported release target.
+- Routed runtime animation behavior through animation ids for dragging and error states, with idle fallback for resources that do not define optional animations.
+- Added macOS utility-category bundle metadata.
+- Replaced the macOS app icon asset set with app-specific pet icons.
 
 ### Added
 
 - Structured local pet resource discovery reports for ignored invalid resources.
 - Testable local pets directory resolution for `CODEX_HOME`, macOS/Linux `HOME`, and Windows `USERPROFILE`.
+- Compact right-click menu feedback for ignored local resource reasons.
+- Widget and controller coverage for ignored resource feedback and behavior animation state changes.
 
 ## 0.1.1 - 2026-07-05
 

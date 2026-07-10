@@ -10,9 +10,9 @@
 
 ## 状态
 
-当前版本：`v0.1.1`
+当前版本：`v0.5.0`
 
-发布状态：macOS 内部 alpha。核心路径已通过自动化验证，应用可运行；右键菜单已迁移到辅助窗口并修正屏幕坐标锚点，但视觉仍偏基础。
+发布状态：macOS 内部 alpha。当前版本已具备 v0.5 阶段的桌面 polish 和资源校验反馈能力。右键菜单运行在辅助窗口中，使用真实鼠标屏幕坐标，并显示紧凑的状态、错误和资源反馈。
 
 ## 功能
 
@@ -21,15 +21,19 @@
 - 内置默认 Codex atlas 宠物资源：`assets/pets/default_pet/`。
 - 从 `${CODEX_HOME:-$HOME/.codex}/pets/<pet-id>/` 发现本地宠物资源。
 - 严格解析规范化 `pet.json` manifest。
+- 右键菜单会显示被忽略的本地资源及原因摘要。
 - 基于 atlas 的 `idle` 动画，帧序列和时长由 manifest 定义。
+- 运行时动画状态可按 animation id 切换；资源未定义可选动画时回退到 `idle`。
 - 拖动移动窗口，并持久化窗口位置。
 - 右键辅助窗口菜单支持宠物切换、尺寸控制、置顶切换、资源刷新、重置配置、错误恢复和退出。
+- 主窗口和辅助菜单窗口对显示器 API 失败有安全 fallback。
+- 项目专用 macOS app icon 资源。
 - 配置持久化统一通过 `SettingsStore`。
 - 运行时行为统一通过 `PetController` 和 `PetState` 管理。
 
 ## 已知限制
 
-- 右键菜单视觉仍较基础。
+- 右键菜单仍是紧凑工具型 UI，不是最终生产视觉。
 - 应用仅做 ad-hoc 签名，未做 Developer ID 签名和 notarization，首次启动需要右键 Open。
 - 当前版本只验证 macOS。
 
@@ -76,6 +80,14 @@ bash scripts/package_dmg.sh
 3. 首次启动时，在 Applications 中右键应用并选择 **Open**。
 4. Gatekeeper 弹窗出现后点击 **Open**。
 5. 后续启动可正常双击。
+
+## macOS 桌面行为
+
+- 主宠物窗口透明、无边框、固定尺寸，并支持拖动。
+- macOS alpha 阶段应用仍是普通 Dock app。
+- 宠物窗口默认置顶，并配置为跨 Spaces 显示。
+- 右键菜单在临时辅助窗口中打开，不进入任务切换，并在失焦时关闭。
+- 如果显示器信息读取失败，应用会回退到安全屏幕位置，而不是启动失败。
 
 ## 验证
 
@@ -132,7 +144,7 @@ Manifest 结构：
 }
 ```
 
-无效 manifest、不安全相对路径、缺失 spritesheet、缺失 atlas 数据、缺失 `idle` 动画的资源会被忽略。内置资源无效时初始化应失败。
+无效 manifest、不安全相对路径、缺失 spritesheet、缺失 atlas 数据、缺失 `idle` 动画的资源会被运行时忽略。被忽略的本地资源会在右键菜单中摘要显示。内置资源无效时初始化应失败。
 
 ## 架构
 
@@ -147,7 +159,10 @@ lib/
 │   ├── auxiliary_window_controller.dart
 │   ├── desktop_auxiliary_window_controller.dart
 │   ├── desktop_window_controller.dart
-│   └── macos_window_bootstrap.dart
+│   ├── macos_window_bootstrap.dart
+│   ├── platform_capabilities.dart
+│   ├── window_bootstrap.dart
+│   └── windows_window_bootstrap.dart
 ├── pet/
 │   ├── animation/
 │   ├── controller/pet_controller.dart
@@ -164,6 +179,7 @@ lib/
 ```text
 main.dart
   -> SettingsStore
+  -> WindowBootstrap (MacosWindowBootstrap | WindowsWindowBootstrap)
   -> DesktopWindowController
   -> DesktopAuxiliaryWindowController
   -> App
@@ -188,7 +204,6 @@ main.dart
 
 完整路线见 `EVOLUTION_PLAN.md`。当前优先级：
 
-1. 改善菜单视觉、错误态展示和设置入口，但不引入大型设置页。
-2. 增强本地资源校验报告，让用户知道资源为什么被忽略。
-3. 扩展动画行为前，先保持 `PetActor` 只负责渲染。
-4. 发布给终端用户前，补 app icon、Developer ID 签名和 notarization。
+1. 执行并记录 macOS v0.5 手工烟测矩阵。
+2. 发布给终端用户前，补 Developer ID 签名和 notarization。
+3. 在 Windows 主机上验证 scaffold 后，才把 Windows 标记为支持平台。

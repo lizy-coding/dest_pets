@@ -10,9 +10,9 @@
 
 ## Status
 
-Current release: `v0.1.1`
+Current release: `v0.5.0`
 
-Release state: macOS internal alpha. Core paths pass automated verification and the app is runnable. The right-click menu runs in an auxiliary window, uses the real cursor screen position, and shows compact status/error feedback.
+Release state: macOS internal alpha. The app has v0.5-stage desktop polish and validation feedback. The right-click menu runs in an auxiliary window, uses the real cursor screen position, and shows compact status/error/resource feedback.
 
 ## Features
 
@@ -21,15 +21,19 @@ Release state: macOS internal alpha. Core paths pass automated verification and 
 - Bundled default Codex pet atlas at `assets/pets/default_pet/`.
 - Local pet discovery from `${CODEX_HOME:-$HOME/.codex}/pets/<pet-id>/`.
 - Strict normalized `pet.json` manifest parsing.
+- Ignored local resource reports are surfaced in the compact right-click menu.
 - Atlas-based `idle` animation with manifest-defined frame timing.
+- Runtime animation state can switch by animation id for behavior states, with idle fallback for resources that do not define optional animations.
 - Drag-to-move window behavior with persisted position.
 - Auxiliary-window right-click menu for status, pet switching, size controls, always-on-top, resource refresh, config reset, recovery, and quit.
+- Main and auxiliary window placement guard against display API failure.
+- App-specific macOS icon assets.
 - Config persistence through `SettingsStore`.
 - Runtime behavior managed through `PetController` and `PetState`.
 
 ## Known Limitations
 
-- Local resource validation reports exist in the repository layer, but invalid resource reasons are not yet surfaced in UI.
+- Right-click menu visuals are still compact and utility-focused rather than final production styling.
 - The app is ad-hoc signed, not Developer ID signed or notarized. First launch requires right-click Open.
 - macOS is the only validated platform for this release.
 
@@ -76,6 +80,14 @@ Output: `dist/Desktop Pet-<version>.dmg`
 3. For the first launch, right-click the app in Applications and select **Open**.
 4. When the Gatekeeper dialog appears, click **Open**.
 5. Later launches work with a normal double-click.
+
+## macOS Desktop Behavior
+
+- The main pet window is transparent, borderless, fixed-size, and draggable.
+- The app remains a normal Dock app in the macOS alpha.
+- The pet window is configured always-on-top by default and visible across Spaces.
+- The right-click menu opens in a temporary auxiliary window, is skipped from the task switcher, and closes when it loses focus.
+- If display lookup fails, the app falls back to a safe on-screen position instead of failing startup.
 
 ## Verify
 
@@ -140,7 +152,7 @@ Manifest shape:
 }
 ```
 
-Invalid manifests, unsafe relative paths, missing spritesheets, missing atlas data, and resources without an `idle` animation are ignored by runtime resource loading. The repository also exposes structured ignored-resource reports for future validation UI. Invalid bundled resources should fail initialization.
+Invalid manifests, unsafe relative paths, missing spritesheets, missing atlas data, and resources without an `idle` animation are ignored by runtime resource loading. Ignored local resources are summarized in the right-click menu. Invalid bundled resources should fail initialization.
 
 ## Architecture
 
@@ -215,7 +227,6 @@ Windows is scaffolded but not a supported release target yet. Before changing th
 
 See `EVOLUTION_PLAN.md` for the full plan. Near-term priorities:
 
-1. Add local resource validation reporting so users can understand ignored resources.
-2. Keep `PetActor` render-only before expanding animation behavior.
-3. Add app icon, Developer ID signing, and notarization before end-user distribution.
-4. Validate the Windows scaffold after the macOS alpha baseline stays green.
+1. Run and record the macOS v0.5 manual smoke matrix.
+2. Add Developer ID signing and notarization before end-user distribution.
+3. Validate the Windows scaffold on a Windows host before marking Windows supported.
