@@ -31,7 +31,10 @@ class PlatformCapabilities {
       return const PlatformCapabilities.none();
     }
 
-    final platform = _currentDesktopPlatform();
+    return PlatformCapabilities.forPlatform(_currentDesktopPlatform());
+  }
+
+  factory PlatformCapabilities.forPlatform(DesktopPlatform platform) {
     final supportsNativeWindowControl =
         platform == DesktopPlatform.macos ||
         platform == DesktopPlatform.windows ||

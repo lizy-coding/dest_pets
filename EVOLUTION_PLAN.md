@@ -1,6 +1,8 @@
 # Evolution Plan
 
-This file is the product and architecture guardrail for future work. Keep changes aligned with the current `v0.1.x` architecture. Do not revive removed pre-v0.1 concepts unless a migration milestone explicitly says so.
+This file is the product and architecture guardrail for future work. Keep
+changes aligned with the current v0.x architecture. Do not revive removed
+pre-v0.1 concepts unless a migration milestone explicitly says so.
 
 ## Current Baseline
 
@@ -39,10 +41,15 @@ Known limitations:
 - Only `idle` is required by resources; optional behavior animations are selected by id when present.
 - App has no Developer ID signing or notarization.
 - Windows support is scaffolded but not yet fully validated.
+- Android and iOS project directories are generated scaffolds, not validated
+  product targets.
+- iOS work is deliberately deferred while Apple Developer Program enrollment
+  is unavailable; Android is the next mobile target.
 
 ## Product Direction
 
-The app should stay a lightweight desktop utility:
+The app should stay a lightweight local pet utility. Desktop and Android
+surfaces may differ, but they share the same resource and runtime contracts.
 
 - Local-first: prefer local assets and deterministic behavior over network features.
 - Small surface area: add focused controls before adding large settings pages.
@@ -57,7 +64,10 @@ The app should stay a lightweight desktop utility:
 Do not spend v0.x effort on:
 
 - Cloud sync, accounts, remote pet marketplaces, or telemetry.
-- Cross-platform UX promises beyond macOS and Windows validation.
+- iOS development, signing, and distribution until Apple Developer Program
+  enrollment is available.
+- Android system-overlay, cross-app always-on-top, or click-through behavior;
+  the first Android release is an in-app pet experience.
 - A large preferences app before resource validation and menu polish are stable.
 - Backward compatibility for pre-v0.1 manifests or old SharedPreferences keys.
 - A new rendering framework while the current atlas renderer is sufficient.
@@ -241,17 +251,16 @@ Exit criteria:
 
 Goal: validate the Windows desktop integration scaffold and make Windows a supported target.
 
+Status: source-prepared Windows internal-alpha candidate. Windows-host build,
+artifact verification, and manual smoke evidence remain required before the
+candidate can be published.
+
 Remaining tasks:
 
 - Validate Windows behavior on a Windows host before marking Windows supported.
 - Run the Windows release build.
 - Run the Windows packaging script.
 - Record manual Windows smoke results for the checklist below.
-- Replace the generated `windows/runner/Runner.rc` product metadata and icon
-  before distributing a Windows artifact.
-- Add focused Windows bootstrap/capability tests; current automated coverage
-  exercises shared fakes and `USERPROFILE` resolution, not Windows plugin
-  behavior.
 - Fix only issues observed during Windows validation; do not add unverified Windows-only behavior speculatively.
 
 Current validation status:
@@ -270,6 +279,17 @@ Already scaffolded before validation:
 - Top-level bootstrap selection lives in `main.dart`.
 - Local pet directory resolution supports `USERPROFILE` fallback on Windows.
 - `scripts/package_windows.bat` exists.
+
+Completed candidate preparation:
+
+- Windows runner product identity, copyright, executable naming, and icon use
+  the Desktop Pet release identity instead of generated Flutter defaults.
+- Windows packaging removes stale release output, fails on build/archive errors,
+  verifies required runtime files, and emits a SHA-256 checksum.
+- Focused tests cover Windows platform capabilities, taskbar behavior, and the
+  shared display-placement path.
+- `WINDOWS_INTERNAL_ALPHA_CHECKLIST.md` records build, artifact, smoke, and
+  release-approval evidence against one exact commit and checksum.
 
 Implementation rules:
 
@@ -290,25 +310,135 @@ Exit criteria:
   executable naming, and application icon.
 - Manual Windows smoke test covers launch, transparent/frameless rendering, always-on-top, drag, right-click menu, blur-close, local resource paths, multi-display, and screen-edge positioning.
 
-### v1.0.0 - Distributable Desktop App
+### v0.7.0 - Android In-App Pet Foundation
 
-Goal: ship a real end-user desktop build with verified macOS and Windows support.
+Goal: make the existing pet runtime usable as a normal Android application
+without carrying desktop window assumptions into the mobile target.
+
+Status: planned. iOS is explicitly deferred; this milestone must not add iOS
+signing, distribution, or Store work.
+
+Product contract:
+
+- The pet renders inside the application, within the system safe area; it is
+  not a system overlay and does not remain above other applications.
+- Long press opens the compact pet menu. There is no secondary-click or
+  auxiliary-window dependency on Android.
+- A drag repositions the pet inside the mobile canvas only. It must not try to
+  move the OS window.
+- Desktop-only controls such as always-on-top, click-through, frameless
+  windows, taskbar behavior, and desktop screen coordinates are hidden or
+  represented as unsupported on Android.
+- The initial Android release uses the bundled pet resource only. Android
+  pet-pack import follows in v0.8.0.
+
+Tasks:
+
+- Split runtime startup into desktop and mobile entry paths. Android startup
+  must not import or initialize `window_manager`, `screen_retriever`, or
+  `desktop_multi_window`.
+- Add a mobile surface/controller boundary that satisfies the UI's pet-surface
+  needs without native desktop window calls. Keep `PetController` as the
+  single UI-facing behavior controller.
+- Create a mobile pet view that uses touch gestures, `SafeArea`, responsive
+  layout, and a mobile menu surface such as a bottom sheet.
+- Define a versioned `PetConfig` migration before storing Android canvas
+  placement. Store normalized canvas coordinates; do not reuse desktop window
+  x/y values for a different meaning.
+- Add lifecycle handling so animation and transient work pause in the
+  background and resume safely when the app returns to the foreground.
+- Audit every dependency for Android support and isolate or remove
+  desktop-only plugins from the Android dependency path.
+- Set Android app identity, icon, launch screen, minimum SDK, target SDK, and
+  release-signing strategy. The generated `com.example` metadata is not
+  acceptable for a distributable artifact.
+
+Implementation rules:
+
+- Shared models, resource parsing, atlas rendering, and `SettingsStore` stay
+  platform-neutral.
+- Keep desktop-only native behavior under `lib/desktop/`; do not add Android
+  conditionals to widgets or `PetController`.
+- Do not create a `PetScene` or revive removed appearance/settings models.
+- Do not request `SYSTEM_ALERT_WINDOW` or equivalent overlay permissions in
+  this milestone.
+- Mobile resource discovery must fail safely to bundled resources until the
+  explicit import milestone supplies an app-sandbox resource location.
+
+Exit criteria:
+
+- `flutter analyze` and `flutter test` pass without native desktop plugin
+  side effects in mobile-targeted tests.
+- Android debug and release builds succeed on a supported Android toolchain.
+- Manual smoke tests pass on an emulator and at least one physical Android
+  device: launch, safe-area layout, touch drag, long-press menu, scale,
+  resource refresh, background/foreground recovery, and rotation policy.
+- No Android startup path initializes desktop window or auxiliary-window
+  plugins.
+- Mobile widget tests cover touch-menu opening/dismissal, unsupported desktop
+  controls, responsive layout, and lifecycle recovery.
+
+### v0.8.0 - Android Pet Pack Import
+
+Goal: let non-technical Android users install a verified pet without seeing
+atlas files, manifests, or resource directories.
+
+Scope:
+
+- Accept a complete `.pet.zip` through the Android system document picker.
+- Extract into a temporary app-sandbox directory, validate with the existing
+  resource parser and repository rules, then install atomically into the
+  Android app's private resource directory.
+- Show a simple preview, name, success state, and actionable invalid-package
+  reason. Never ask the user to edit `pet.json` or a spritesheet.
+- Support delete and replacement confirmation for imported pets.
+
+Implementation rules:
+
+- A pet pack contains the project's current strict `pet.json` and
+  `spritesheet.webp`; do not accept legacy manifest fields.
+- Keep document-picker and filesystem calls outside UI widgets and outside
+  `PetController`.
+- Failed, cancelled, oversized, or invalid imports must not modify active
+  resources or leave partial directories behind.
+- Do not add cloud accounts, a marketplace, or image generation to the import
+  milestone.
+
+Exit criteria:
+
+- Tests cover valid, malformed, unsafe-path, missing-image, duplicate-id,
+  cancellation, and interrupted-import cases.
+- A user can import, preview, switch, restart, and delete a pet on a physical
+  Android device without accessing the filesystem manually.
+- The same invalid-resource reasons remain visible in the compact menu after
+  refresh.
+
+### v1.0.0 - Distributable macOS, Windows, and Android App
+
+Goal: ship a real end-user build with verified macOS, Windows, and Android
+support. iOS remains deferred until its account and distribution prerequisites
+are available.
 
 Tasks:
 
 - Add production app icon.
-- Configure code signing for macOS (Developer ID, notarization) and Windows.
-- Review bundle identifier and copyright.
-- Decide final artifact formats.
-- Add signed release checklist for both platforms.
-- Verify install/open behavior on clean macOS and Windows accounts.
+- Configure code signing for macOS (Developer ID, notarization), Windows, and
+  Android.
+- Review bundle/package identifiers, copyright, icons, and privacy notices.
+- Decide final artifact formats, including Android APK and/or App Bundle.
+- Add signed release checklists for all supported platforms.
+- Verify install/open behavior on clean macOS, Windows, and Android devices.
 
 Exit criteria:
 
-- Release artifacts are signed and notarized (macOS) / code-signed (Windows).
+- Release artifacts are signed and notarized (macOS) / code-signed (Windows
+  and Android).
 - Gatekeeper opens the app through normal double-click after install.
 - Windows build passes SmartScreen without blocking.
-- README includes user-facing install, troubleshooting, and uninstall notes for both platforms.
+- Android artifact installs, launches, upgrades, and uninstalls successfully
+  on supported devices.
+- README includes user-facing install, troubleshooting, and uninstall notes
+  for all supported platforms.
 
 ## Architecture Guardrails
 
@@ -317,6 +447,8 @@ Exit criteria:
 - `main.dart`: runtime entry selection and top-level bootstrap only.
 - `lib/app/`: app composition, providers, and menu action binding.
 - `lib/desktop/`: native window, auxiliary window, display, cursor, and desktop integration.
+- `lib/mobile/`: Android app-surface, touch interaction, lifecycle, and
+  mobile-only platform integration after v0.7.0.
 - `lib/pet/controller/`: runtime behavior and state transitions.
 - `lib/pet/model/`: runtime and menu data models.
 - `lib/pet/view/`: rendering and interaction widgets only.
@@ -352,6 +484,20 @@ main.dart
        -> PetContextMenu
 ```
 
+Android app surface after v0.7.0:
+
+```text
+main.dart
+  -> SettingsStore
+  -> MobilePetSurfaceController
+  -> App
+       -> PetResourceRepository
+       -> PetController
+       -> MobilePetView
+            -> PetHitArea
+            -> PetActor
+```
+
 ### Do
 
 - Put persistable config in `PetConfig`.
@@ -360,8 +506,11 @@ main.dart
 - Put resource parsing and validation in `lib/resources/`.
 - Put SharedPreferences access only in `SettingsStore`.
 - Put native window calls only in desktop boundary classes.
+- Keep Android document-picker, lifecycle, and app-sandbox filesystem calls in
+  mobile/resource boundaries, never in widgets or `PetController`.
 - Add tests at the same layer where behavior changes.
-- Keep releases synchronized across `pubspec.yaml`, `CHANGELOG.md`, `RELEASE.md`, `README.md`, macOS metadata, and Windows metadata when needed.
+- Keep releases synchronized across `pubspec.yaml`, `CHANGELOG.md`,
+  `RELEASE.md`, `README.md`, and all affected platform metadata.
 
 ### Do Not
 
@@ -383,6 +532,10 @@ main.dart
 - Runtime mode changes need `PetController` tests.
 - Menu, settings, and interaction changes need widget tests.
 - Desktop/window changes need a fakeable abstraction or a documented manual smoke test.
+- Android surface changes need touch, safe-area/responsive-layout, lifecycle,
+  and no-desktop-plugin-side-effect coverage.
+- Android import changes need temporary-directory cleanup and atomic-install
+  tests in addition to resource validation tests.
 - Controllers created in tests must be disposed.
 
 ## Release Checklist
@@ -405,6 +558,21 @@ flutter build windows --release
 scripts\package_windows.bat
 ```
 
+Then complete `WINDOWS_INTERNAL_ALPHA_CHECKLIST.md` against the generated zip.
+Do not create or push the Windows version tag while any required row is not
+passed.
+
+Before Android-tagged releases also run:
+
+```sh
+flutter build apk --debug
+flutter build apk --release
+```
+
+Then run the recorded Android physical-device smoke matrix. A release APK is
+not a Play-distribution artifact until the selected Android signing and
+distribution requirements have been completed.
+
 Update release files:
 
 - `pubspec.yaml`
@@ -415,6 +583,9 @@ Update release files:
 - `scripts/package_dmg.sh` if artifact behavior changes
 - `scripts/package_windows.bat` if artifact behavior changes
 - `windows/runner/main.cpp` if native window behavior changes
+- `android/app/build.gradle.kts`, `android/app/src/main/AndroidManifest.xml`,
+  Android app icons, and Android signing configuration when Android release
+  behavior or identity changes
 
 Publish:
 
@@ -434,4 +605,10 @@ And/or the Windows zip from:
 
 ```text
 dist/Desktop Pet-<version>-windows-x64.zip
+```
+
+Upload the matching checksum file alongside it:
+
+```text
+dist/Desktop Pet-<version>-windows-x64.zip.sha256
 ```

@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.6.0 - Unreleased
+
+Windows internal alpha candidate. Publication remains blocked on a successful
+Windows-host release build, packaged-zip verification, and the recorded manual
+smoke matrix.
+
+### Added
+
+- Focused automated coverage for Windows platform capabilities, taskbar
+  behavior, and shared display placement.
+- A Windows internal-alpha release checklist with build, artifact, smoke, and
+  approval evidence fields.
+- SHA-256 checksum generation for the packaged Windows zip.
+
+### Changed
+
+- Replaced generated Windows product metadata and the Flutter template icon
+  with the Desktop Pet identity and project icon.
+- Renamed the Windows executable to `DesktopPet.exe` while keeping the product
+  name and window title as `Desktop Pet`.
+- Hardened Windows packaging to remove stale output, stop on build or archive
+  failures, verify required runtime files, and reject missing or empty output.
+- Prepared the project version as `0.6.0+6` without claiming Windows support
+  before host validation passes.
+
 ## 0.5.0 - 2026-07-08
 
 ### Changed

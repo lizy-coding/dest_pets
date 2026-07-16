@@ -1,5 +1,62 @@
 # Release Notes
 
+## v0.6.0
+
+Date: pending Windows validation.
+
+Type: Windows internal alpha candidate; not yet published.
+
+### Scope
+
+This candidate prepares the existing Windows scaffold for controlled internal
+testing:
+
+- Uses the final `Desktop Pet` product identity and project icon in the Windows
+  runner.
+- Produces `Desktop Pet-0.6.0-windows-x64.zip` and a matching SHA-256 file.
+- Fails packaging when the build, runtime bundle verification, archive, or
+  checksum step fails.
+- Adds focused Windows bootstrap and capability coverage while preserving the
+  shared desktop boundaries.
+
+### Automated Verification
+
+Run on the Windows release host from a clean checkout:
+
+```bat
+flutter doctor -v
+flutter pub get
+dart format --output=none --set-exit-if-changed lib test
+flutter analyze
+flutter test
+scripts\package_windows.bat
+```
+
+The packaging script performs the release build and must produce:
+
+```text
+dist/Desktop Pet-0.6.0-windows-x64.zip
+dist/Desktop Pet-0.6.0-windows-x64.zip.sha256
+```
+
+### Manual Smoke Gate
+
+Complete and record every item in `WINDOWS_INTERNAL_ALPHA_CHECKLIST.md` against
+the final extracted zip. The gate covers launch, transparent and frameless
+rendering, always-on-top, drag and persistence, menu actions and blur-close,
+resource discovery, invalid-resource reporting, multi-display placement,
+screen-edge placement, clean exit, and a second Windows account or machine.
+
+### Publishing Notes
+
+- Do not create or push the `v0.6.0` tag until the Windows checklist is fully
+  passed and references the exact release commit and artifact SHA-256.
+- This internal artifact is not Authenticode signed. Testers may see Microsoft
+  Defender SmartScreen and must receive the documented internal exception
+  procedure.
+- Do not describe Windows as generally supported; this is a controlled internal
+  alpha until the recorded Windows validation passes.
+
 ## v0.5.0
 
 Date: 2026-07-08

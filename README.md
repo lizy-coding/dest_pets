@@ -2,7 +2,7 @@
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-`desktop_pet` is a Flutter macOS desktop pet proof of concept. It renders a Codex atlas pet animation in a transparent, borderless, always-on-top desktop window, supports dragging, a right-click menu, local pet resource discovery, and persists the selected pet, scale, always-on-top preference, and window position.
+`desktop_pet` is a Flutter desktop pet proof of concept. It renders a Codex atlas pet animation in a transparent, borderless, always-on-top desktop window, supports dragging, a right-click menu, local pet resource discovery, and persists the selected pet, scale, always-on-top preference, and window position.
 
 ## Example
 
@@ -10,9 +10,11 @@
 
 ## Status
 
-Current release: `v0.5.0`
+Current validated internal release: `v0.5.0` for macOS.
 
-Release state: macOS internal alpha. The app has v0.5-stage desktop polish and validation feedback. The right-click menu runs in an auxiliary window, uses the real cursor screen position, and shows compact status/error/resource feedback.
+Next candidate: `v0.6.0` Windows internal alpha. Its source, metadata, icon,
+packaging checks, and automated test seams are prepared, but publication remains
+blocked on the Windows-host build and recorded smoke checklist.
 
 ## Features
 
@@ -28,6 +30,7 @@ Release state: macOS internal alpha. The app has v0.5-stage desktop polish and v
 - Auxiliary-window right-click menu for status, pet switching, size controls, always-on-top, resource refresh, config reset, recovery, and quit.
 - Main and auxiliary window placement guard against display API failure.
 - App-specific macOS icon assets.
+- Matching project-specific Windows application icon and product metadata.
 - Config persistence through `SettingsStore`.
 - Runtime behavior managed through `PetController` and `PetState`.
 
@@ -35,18 +38,29 @@ Release state: macOS internal alpha. The app has v0.5-stage desktop polish and v
 
 - Right-click menu visuals are still compact and utility-focused rather than final production styling.
 - The app is ad-hoc signed, not Developer ID signed or notarized. First launch requires right-click Open.
-- macOS is the only validated platform for this release.
+- The Windows internal-alpha candidate is unsigned and may trigger Microsoft
+  Defender SmartScreen.
+- macOS remains the only validated platform until the Windows release checklist
+  passes.
 
 ## Requirements
 
 - Flutter SDK compatible with Dart `^3.11.5`
 - macOS for the validated desktop target
+- Windows with a supported Flutter desktop toolchain for candidate validation
 
 ## Run
 
 ```sh
 flutter pub get
 flutter run -d macos
+```
+
+Windows:
+
+```bat
+flutter pub get
+flutter run -d windows
 ```
 
 ## Build And Package
@@ -72,6 +86,42 @@ bash scripts/package_dmg.sh
 ```
 
 Output: `dist/Desktop Pet-<version>.dmg`
+
+Windows release zip and SHA-256:
+
+```bat
+scripts\package_windows.bat
+```
+
+Outputs:
+
+```text
+dist/Desktop Pet-<version>-windows-x64.zip
+dist/Desktop Pet-<version>-windows-x64.zip.sha256
+```
+
+## Install The Windows Internal Alpha
+
+1. Download the zip and its `.sha256` file into the same directory.
+2. Verify the zip in PowerShell:
+
+   ```powershell
+   Get-FileHash "Desktop Pet-0.6.0-windows-x64.zip" -Algorithm SHA256
+   ```
+
+   Confirm that the reported hash matches the first value in the `.sha256`
+   file.
+3. Extract the entire zip to a normal directory. Do not run the executable from
+   inside the archive.
+4. Launch `DesktopPet.exe`. Because the internal alpha is unsigned, Microsoft
+   Defender SmartScreen may require **More info** followed by **Run anyway**.
+5. To uninstall, quit Desktop Pet, delete the extracted directory, and remove
+   `%USERPROFILE%\.codex\pets` only if its locally installed pets are no longer
+   needed. User preferences can be removed from Windows app settings data when
+   a completely clean reset is required.
+
+Only use the SmartScreen exception for an artifact whose SHA-256 matches the
+value supplied by the internal release owner.
 
 ## Install From DMG
 
@@ -210,11 +260,12 @@ main.dart
 
 ## Windows Validation Checklist
 
-Windows is scaffolded but not a supported release target yet. Before changing that status, validate on a Windows host:
+Windows is prepared as an internal-alpha candidate but is not a supported
+release target yet. Use [WINDOWS_INTERNAL_ALPHA_CHECKLIST.md](WINDOWS_INTERNAL_ALPHA_CHECKLIST.md)
+to record the final Windows-host gate. At minimum:
 
-- `flutter build windows --release`
 - `scripts/package_windows.bat`
-- Launch from the release build and packaged zip.
+- Verify the generated SHA-256 and launch from the extracted packaged zip.
 - Transparent borderless window rendering.
 - Always-on-top behavior.
 - Drag-to-move and persisted position.
