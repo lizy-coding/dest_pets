@@ -4,8 +4,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import 'local_pets_directory_resolver.dart';
 import '../model/pet_manifest.dart';
 import '../model/pet_resource.dart';
+import '../model/pet_resource_discovery_result.dart';
 
 class PetResourceRepository {
   PetResourceRepository({
@@ -22,9 +24,19 @@ class PetResourceRepository {
 
   Future<List<PetResource>> loadAvailableResources() async {
     final bundledResource = await loadBundledResource();
-    final localResources = await discoverLocalResources();
+    final discoveryResult = await discoverLocalResourcesWithReports();
 
-    return [bundledResource, ...localResources];
+    return [bundledResource, ...discoveryResult.validResources];
+  }
+
+  Future<PetResourceDiscoveryResult> loadAvailableResourcesWithReports() async {
+    final bundledResource = await loadBundledResource();
+    final discoveryResult = await discoverLocalResourcesWithReports();
+
+    return PetResourceDiscoveryResult(
+      validResources: [bundledResource, ...discoveryResult.validResources],
+      ignoredResources: discoveryResult.ignoredResources,
+    );
   }
 
   Future<PetResource> loadBundledResource() async {
@@ -37,30 +49,55 @@ class PetResourceRepository {
   }
 
   Future<List<PetResource>> discoverLocalResources() async {
+    final result = await discoverLocalResourcesWithReports();
+    return result.validResources;
+  }
+
+  Future<PetResourceDiscoveryResult> discoverLocalResourcesWithReports() async {
     final directoryPath = localPetsDirectory ?? _defaultLocalPetsDirectory();
     if (directoryPath == null) {
-      return const [];
+      return const PetResourceDiscoveryResult(
+        validResources: [],
+        ignoredResources: [],
+      );
     }
 
     final directory = Directory(directoryPath);
     if (!await directory.exists()) {
-      return const [];
+      return const PetResourceDiscoveryResult(
+        validResources: [],
+        ignoredResources: [],
+      );
     }
 
     final resources = <PetResource>[];
+    final reports = <PetResourceValidationReport>[];
     try {
       await for (final entity in directory.list(followLinks: false)) {
         if (entity is! Directory) {
           continue;
         }
 
-        final resource = await _loadLocalResource(entity);
-        if (resource != null) {
-          resources.add(resource);
+        final result = await _loadLocalResource(entity);
+        switch (result) {
+          case _ValidLocalResource(:final resource):
+            resources.add(resource);
+          case _InvalidLocalResource(:final report):
+            reports.add(report);
         }
       }
     } on FileSystemException {
-      return const [];
+      return PetResourceDiscoveryResult(
+        validResources: const [],
+        ignoredResources: [
+          PetResourceValidationReport(
+            directoryPath: directoryPath,
+            severity: PetResourceValidationSeverity.error,
+            reason: PetResourceValidationReason.unreadableDirectory,
+            message: 'Local pets directory could not be read.',
+          ),
+        ],
+      );
     }
 
     resources.sort((left, right) {
@@ -72,7 +109,10 @@ class PetResourceRepository {
       return left.id.compareTo(right.id);
     });
 
-    return resources;
+    return PetResourceDiscoveryResult(
+      validResources: resources,
+      ignoredResources: reports,
+    );
   }
 
   PetResource resolveResource(List<PetResource> resources, String petId) {
@@ -121,10 +161,16 @@ class PetResourceRepository {
     }
   }
 
-  Future<PetResource?> _loadLocalResource(Directory directory) async {
+  Future<_LocalResourceLoadResult> _loadLocalResource(
+    Directory directory,
+  ) async {
     final manifestFile = File('${directory.path}/pet.json');
     if (!await manifestFile.exists()) {
-      return null;
+      return _invalidLocalResource(
+        directory,
+        PetResourceValidationReason.missingManifest,
+        'Resource is missing pet.json.',
+      );
     }
 
     try {
@@ -135,20 +181,54 @@ class PetResourceRepository {
         basePath: directory.path,
       );
       if (resource == null) {
-        return null;
+        return _invalidLocalResource(
+          directory,
+          PetResourceValidationReason.invalidManifest,
+          'pet.json is not a valid current-version pet manifest.',
+        );
       }
 
       final spritesheet = File(resource.resolvedSpritesheetPath);
       if (!await spritesheet.exists()) {
-        return null;
+        return _invalidLocalResource(
+          directory,
+          PetResourceValidationReason.missingSpritesheet,
+          'Resource spritesheet is missing.',
+          resourceId: resource.id,
+        );
       }
 
-      return resource;
+      return _ValidLocalResource(resource);
     } on FileSystemException {
-      return null;
+      return _invalidLocalResource(
+        directory,
+        PetResourceValidationReason.unreadableResource,
+        'Resource files could not be read.',
+      );
     } on FormatException {
-      return null;
+      return _invalidLocalResource(
+        directory,
+        PetResourceValidationReason.invalidManifest,
+        'pet.json is not valid JSON.',
+      );
     }
+  }
+
+  _InvalidLocalResource _invalidLocalResource(
+    Directory directory,
+    PetResourceValidationReason reason,
+    String message, {
+    String? resourceId,
+  }) {
+    return _InvalidLocalResource(
+      PetResourceValidationReport(
+        directoryPath: directory.path,
+        resourceId: resourceId,
+        severity: PetResourceValidationSeverity.warning,
+        reason: reason,
+        message: message,
+      ),
+    );
   }
 
   PetResource? _parseResource(
@@ -176,16 +256,41 @@ class PetResourceRepository {
   }
 
   String? _defaultLocalPetsDirectory() {
-    final codexHome = Platform.environment['CODEX_HOME'];
-    if (codexHome != null && codexHome.isNotEmpty) {
-      return '$codexHome/pets';
-    }
-
-    final home = Platform.environment['HOME'];
-    if (home == null || home.isEmpty) {
-      return null;
-    }
-
-    return '$home/.codex/pets';
+    return LocalPetsDirectoryResolver(
+      environment: Platform.environment,
+      platform: _currentPlatform(),
+    ).resolve();
   }
+}
+
+sealed class _LocalResourceLoadResult {
+  const _LocalResourceLoadResult();
+}
+
+class _ValidLocalResource extends _LocalResourceLoadResult {
+  const _ValidLocalResource(this.resource);
+
+  final PetResource resource;
+}
+
+class _InvalidLocalResource extends _LocalResourceLoadResult {
+  const _InvalidLocalResource(this.report);
+
+  final PetResourceValidationReport report;
+}
+
+DesktopPlatform _currentPlatform() {
+  if (Platform.isMacOS) {
+    return DesktopPlatform.macos;
+  }
+
+  if (Platform.isWindows) {
+    return DesktopPlatform.windows;
+  }
+
+  if (Platform.isLinux) {
+    return DesktopPlatform.linux;
+  }
+
+  return DesktopPlatform.other;
 }

@@ -6,6 +6,7 @@ import 'package:desktop_pet/pet/view/pet_actor.dart';
 import 'package:desktop_pet/resources/data/pet_resource_repository.dart';
 import 'package:desktop_pet/resources/model/pet_manifest.dart';
 import 'package:desktop_pet/resources/model/pet_resource.dart';
+import 'package:desktop_pet/resources/model/pet_resource_discovery_result.dart';
 import 'package:desktop_pet/settings/settings_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,6 +19,14 @@ class FakePetResourceRepository extends PetResourceRepository {
   @override
   Future<List<PetResource>> loadAvailableResources() async {
     return resources;
+  }
+
+  @override
+  Future<PetResourceDiscoveryResult> loadAvailableResourcesWithReports() async {
+    return PetResourceDiscoveryResult(
+      validResources: resources,
+      ignoredResources: const [],
+    );
   }
 }
 
@@ -44,9 +53,7 @@ void main() {
   testWidgets('renders the desktop pet view', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final settingsStore = SettingsStore();
-    final windowController = DesktopWindowController(
-      settingsStore: settingsStore,
-    );
+    final windowController = DesktopWindowController();
     final pet = _resource();
 
     await tester.pumpWidget(

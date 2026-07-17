@@ -1,3 +1,4 @@
+import '../../resources/model/pet_resource_discovery_result.dart';
 import 'pet_resource_option.dart';
 import 'pet_runtime_mode.dart';
 import 'pet_state.dart';
@@ -8,6 +9,7 @@ class PetSettingsSnapshot {
     required this.scale,
     required this.alwaysOnTop,
     required this.resourceOptions,
+    this.ignoredResourceReports = const [],
     required this.runtimeMode,
     this.errorMessage,
   });
@@ -16,6 +18,7 @@ class PetSettingsSnapshot {
   final double scale;
   final bool alwaysOnTop;
   final List<PetResourceOption> resourceOptions;
+  final List<PetResourceValidationReport> ignoredResourceReports;
   final PetRuntimeMode runtimeMode;
   final String? errorMessage;
 
@@ -28,6 +31,11 @@ class PetSettingsSnapshot {
         for (final item
             in json['resourceOptions'] as List<dynamic>? ?? const [])
           PetResourceOption.fromJson(item as Map<String, dynamic>),
+      ],
+      ignoredResourceReports: [
+        for (final item
+            in json['ignoredResourceReports'] as List<dynamic>? ?? const [])
+          PetResourceValidationReport.fromJson(item as Map<String, dynamic>),
       ],
       runtimeMode: _petRuntimeModeFromJson(json['runtimeMode']),
       errorMessage: json['errorMessage'] as String?,
@@ -46,6 +54,9 @@ class PetSettingsSnapshot {
       'resourceOptions': [
         for (final resource in resourceOptions) resource.toJson(),
       ],
+      'ignoredResourceReports': [
+        for (final report in ignoredResourceReports) report.toJson(),
+      ],
       'runtimeMode': runtimeMode.name,
       if (errorMessage != null) 'errorMessage': errorMessage,
     };
@@ -63,6 +74,7 @@ class PetSettingsSnapshot {
             selectedPetId: state.config.petId,
           ),
       ],
+      ignoredResourceReports: state.ignoredResourceReports,
       runtimeMode: state.runtimeMode,
       errorMessage: state.errorMessage,
     );

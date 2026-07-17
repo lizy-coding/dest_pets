@@ -1,6 +1,7 @@
 import 'package:desktop_pet/app/app.dart';
 import 'package:desktop_pet/desktop/auxiliary_window_controller.dart';
 import 'package:desktop_pet/desktop/desktop_window_controller.dart';
+import 'package:desktop_pet/desktop/platform_capabilities.dart';
 import 'package:desktop_pet/pet/controller/pet_controller.dart';
 import 'package:desktop_pet/pet/model/pet_config.dart';
 import 'package:desktop_pet/pet/model/pet_menu_action.dart';
@@ -14,6 +15,7 @@ import 'package:desktop_pet/pet/view/pet_view.dart';
 import 'package:desktop_pet/resources/data/pet_resource_repository.dart';
 import 'package:desktop_pet/resources/model/pet_manifest.dart';
 import 'package:desktop_pet/resources/model/pet_resource.dart';
+import 'package:desktop_pet/resources/model/pet_resource_discovery_result.dart';
 import 'package:desktop_pet/settings/settings_store.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -32,7 +34,6 @@ class FakePetController extends PetController {
   int increaseCalls = 0;
   int decreaseCalls = 0;
   int resetCalls = 0;
-  int openSettingsCalls = 0;
   int refreshResourcesCalls = 0;
   int resetConfigCalls = 0;
   int recoverFromErrorCalls = 0;
@@ -73,12 +74,6 @@ class FakePetController extends PetController {
   }
 
   @override
-  Future<void> openSettings() async {
-    openSettingsCalls += 1;
-    testState = testState.copyWith(isSettingsOpen: true);
-  }
-
-  @override
   Future<void> refreshResources() async {
     refreshResourcesCalls += 1;
   }
@@ -102,11 +97,25 @@ class FakePetController extends PetController {
 }
 
 class FakeDesktopWindowController extends DesktopWindowController {
-  FakeDesktopWindowController() : super(settingsStore: SettingsStore());
+  FakeDesktopWindowController() : super();
 
   bool closeCalled = false;
   bool startDraggingCalled = false;
   bool? alwaysOnTopValue;
+
+  @override
+  PlatformCapabilities get capabilities {
+    return const PlatformCapabilities(
+      platform: DesktopPlatform.macos,
+      supportsNativeWindowControl: true,
+      supportsAuxiliaryWindows: true,
+      supportsTransparency: true,
+      supportsClickThrough: false,
+      supportsTray: false,
+      supportsLaunchAtStartup: false,
+      supportsGlobalShortcut: false,
+    );
+  }
 
   @override
   Future<void> startDragging() async {
@@ -208,6 +217,14 @@ void main() {
         config: const PetConfig(scale: 1.25, alwaysOnTop: false),
         resource: bundledResource,
         availableResources: [bundledResource, localResource],
+        ignoredResourceReports: [
+          const PetResourceValidationReport(
+            directoryPath: '/tmp/broken_pet',
+            severity: PetResourceValidationSeverity.warning,
+            reason: PetResourceValidationReason.missingSpritesheet,
+            message: 'Resource spritesheet is missing.',
+          ),
+        ],
       ),
     );
     addTearDown(controller.dispose);
@@ -231,6 +248,10 @@ void main() {
     expect(auxiliaryWindowController.snapshot?.scale, 1.25);
     expect(auxiliaryWindowController.snapshot?.alwaysOnTop, isFalse);
     expect(auxiliaryWindowController.snapshot?.resourceOptions, hasLength(2));
+    expect(
+      auxiliaryWindowController.snapshot?.ignoredResourceReports.single.reason,
+      PetResourceValidationReason.missingSpritesheet,
+    );
     expect(find.byType(PetContextMenu), findsNothing);
   });
 
@@ -290,6 +311,8 @@ void main() {
     await tester.tap(find.text('Recover'));
 
     expect(actions[0].type, PetMenuActionType.recoverFromError);
+    expect(find.text('Needs recovery'), findsOneWidget);
+    expect(find.text('load failed'), findsOneWidget);
   });
 
   testWidgets('context menu emits switch action in idle state', (tester) async {
@@ -315,6 +338,51 @@ void main() {
 
     expect(actions.single.type, PetMenuActionType.switchPet);
     expect(actions.single.petId, 'local_pet');
+    expect(find.text('Ready'), findsOneWidget);
+    expect(find.text('2 resources available'), findsOneWidget);
+    expect(find.text('100%'), findsOneWidget);
+    expect(find.text('Settings...'), findsNothing);
+  });
+
+  testWidgets('context menu shows ignored resource reasons', (tester) async {
+    final actions = <PetMenuAction>[];
+    final snapshot = PetSettingsSnapshot.fromState(
+      PetState(
+        config: const PetConfig(),
+        resource: bundledResource,
+        availableResources: [bundledResource, localResource],
+        runtimeMode: PetRuntimeMode.idle,
+        ignoredResourceReports: const [
+          PetResourceValidationReport(
+            directoryPath: '/tmp/broken_pet',
+            severity: PetResourceValidationSeverity.warning,
+            reason: PetResourceValidationReason.missingSpritesheet,
+            message: 'Resource spritesheet is missing.',
+          ),
+          PetResourceValidationReport(
+            directoryPath: '/tmp/legacy_pet',
+            severity: PetResourceValidationSeverity.warning,
+            reason: PetResourceValidationReason.invalidManifest,
+            message: 'pet.json is invalid.',
+          ),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PetContextMenu(snapshot: snapshot, onAction: actions.add),
+        ),
+      ),
+    );
+
+    expect(find.text('2 resources available, 2 ignored'), findsOneWidget);
+    expect(find.text('2 ignored resources'), findsOneWidget);
+    expect(find.textContaining('broken_pet'), findsOneWidget);
+    expect(find.textContaining('missing spritesheet'), findsOneWidget);
+    expect(find.textContaining('legacy_pet'), findsOneWidget);
+    expect(find.textContaining('invalid pet.json'), findsOneWidget);
   });
 
   testWidgets('app handles auxiliary menu actions', (tester) async {

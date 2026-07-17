@@ -1,5 +1,50 @@
 # Changelog
 
+## 0.6.0 - Unreleased
+
+Windows internal alpha candidate. Publication remains blocked on a successful
+Windows-host release build, packaged-zip verification, and the recorded manual
+smoke matrix.
+
+### Added
+
+- Focused automated coverage for Windows platform capabilities, taskbar
+  behavior, and shared display placement.
+- A Windows internal-alpha release checklist with build, artifact, smoke, and
+  approval evidence fields.
+- SHA-256 checksum generation for the packaged Windows zip.
+
+### Changed
+
+- Replaced generated Windows product metadata and the Flutter template icon
+  with the Desktop Pet identity and project icon.
+- Renamed the Windows executable to `DesktopPet.exe` while keeping the product
+  name and window title as `Desktop Pet`.
+- Hardened Windows packaging to remove stale output, stop on build or archive
+  failures, verify required runtime files, and reject missing or empty output.
+- Prepared the project version as `0.6.0+6` without claiming Windows support
+  before host validation passes.
+
+## 0.5.0 - 2026-07-08
+
+### Changed
+
+- Polished the auxiliary right-click menu with a compact pet/status header, current scale display, and clearer status/error messaging.
+- Removed the unimplemented Settings menu entry until a focused v0.2 settings surface exists.
+- Centralized desktop platform capability checks in the desktop layer.
+- Hardened main and auxiliary window placement against screen API failures.
+- Documented the Windows validation checklist without changing the supported release target.
+- Routed runtime animation behavior through animation ids for dragging and error states, with idle fallback for resources that do not define optional animations.
+- Added macOS utility-category bundle metadata.
+- Replaced the macOS app icon asset set with app-specific pet icons.
+
+### Added
+
+- Structured local pet resource discovery reports for ignored invalid resources.
+- Testable local pets directory resolution for `CODEX_HOME`, macOS/Linux `HOME`, and Windows `USERPROFILE`.
+- Compact right-click menu feedback for ignored local resource reasons.
+- Widget and controller coverage for ignored resource feedback and behavior animation state changes.
+
 ## 0.1.1 - 2026-07-05
 
 Patch macOS internal alpha release.

@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../resources/data/pet_resource_repository.dart';
 import '../../resources/model/pet_resource.dart';
+import '../../resources/model/pet_resource_discovery_result.dart';
 import '../../settings/settings_store.dart';
 import '../model/pet_animation_state.dart';
 import '../model/pet_config.dart';
@@ -47,6 +48,7 @@ class PetController extends ChangeNotifier {
           config: resolved.config,
           resource: resolved.resource,
           availableResources: resolved.resources,
+          ignoredResourceReports: resolved.ignoredResourceReports,
           runtimeMode: PetRuntimeMode.idle,
           animationState: const PetAnimationState(),
         ),
@@ -56,6 +58,9 @@ class PetController extends ChangeNotifier {
         _state.copyWith(
           runtimeMode: PetRuntimeMode.error,
           resource: null,
+          animationState: const PetAnimationState(
+            animationId: PetAnimationState.errorAnimationId,
+          ),
           errorMessage: error.toString(),
         ),
       );
@@ -78,6 +83,7 @@ class PetController extends ChangeNotifier {
           config: resolved.config,
           resource: resolved.resource,
           availableResources: resolved.resources,
+          ignoredResourceReports: resolved.ignoredResourceReports,
           runtimeMode: PetRuntimeMode.idle,
           errorMessage: null,
         ),
@@ -90,6 +96,9 @@ class PetController extends ChangeNotifier {
       _setState(
         _state.copyWith(
           runtimeMode: PetRuntimeMode.error,
+          animationState: const PetAnimationState(
+            animationId: PetAnimationState.errorAnimationId,
+          ),
           errorMessage: error.toString(),
         ),
       );
@@ -105,9 +114,13 @@ class PetController extends ChangeNotifier {
     );
 
     try {
-      final resources = _state.availableResources.isEmpty
-          ? await _resourceRepository.loadAvailableResources()
-          : _state.availableResources;
+      final resolvedResources = _state.availableResources.isEmpty
+          ? await _resourceRepository.loadAvailableResourcesWithReports()
+          : PetResourceDiscoveryResult(
+              validResources: _state.availableResources,
+              ignoredResources: _state.ignoredResourceReports,
+            );
+      final resources = resolvedResources.validResources;
       final resource = _findResource(resources, petId);
       final config = _state.config.copyWith(petId: resource.id);
 
@@ -116,6 +129,7 @@ class PetController extends ChangeNotifier {
           config: config,
           resource: resource,
           availableResources: resources,
+          ignoredResourceReports: resolvedResources.ignoredResources,
           runtimeMode: PetRuntimeMode.idle,
           animationState: const PetAnimationState(),
           errorMessage: null,
@@ -126,6 +140,9 @@ class PetController extends ChangeNotifier {
       _setState(
         _state.copyWith(
           runtimeMode: PetRuntimeMode.error,
+          animationState: const PetAnimationState(
+            animationId: PetAnimationState.errorAnimationId,
+          ),
           errorMessage: error.toString(),
         ),
       );
@@ -178,6 +195,7 @@ class PetController extends ChangeNotifier {
           config: resolved.config,
           resource: resolved.resource,
           availableResources: resolved.resources,
+          ignoredResourceReports: resolved.ignoredResourceReports,
           runtimeMode: PetRuntimeMode.idle,
           animationState: const PetAnimationState(),
           errorMessage: null,
@@ -187,6 +205,9 @@ class PetController extends ChangeNotifier {
       _setState(
         _state.copyWith(
           runtimeMode: PetRuntimeMode.error,
+          animationState: const PetAnimationState(
+            animationId: PetAnimationState.errorAnimationId,
+          ),
           errorMessage: error.toString(),
         ),
       );
@@ -198,23 +219,26 @@ class PetController extends ChangeNotifier {
       return;
     }
 
-    _setState(_state.copyWith(runtimeMode: PetRuntimeMode.dragging));
+    _setState(
+      _state.copyWith(
+        runtimeMode: PetRuntimeMode.dragging,
+        animationState: const PetAnimationState(
+          animationId: PetAnimationState.draggingAnimationId,
+        ),
+      ),
+    );
   }
 
   Future<void> endDragging(Offset position) async {
     final config = _state.config.copyWith(windowPosition: position);
     _setState(
-      _state.copyWith(config: config, runtimeMode: PetRuntimeMode.idle),
+      _state.copyWith(
+        config: config,
+        runtimeMode: PetRuntimeMode.idle,
+        animationState: const PetAnimationState(),
+      ),
     );
     await _settingsStore.saveConfig(config);
-  }
-
-  Future<void> openSettings() async {
-    _setState(_state.copyWith(isSettingsOpen: true));
-  }
-
-  Future<void> closeSettings() async {
-    _setState(_state.copyWith(isSettingsOpen: false));
   }
 
   Future<void> recoverFromError() async {
@@ -224,7 +248,9 @@ class PetController extends ChangeNotifier {
   Future<_ResolvedPetResources> _loadResourcesForConfig(
     PetConfig config,
   ) async {
-    final resources = await _resourceRepository.loadAvailableResources();
+    final discoveryResult = await _resourceRepository
+        .loadAvailableResourcesWithReports();
+    final resources = discoveryResult.validResources;
     final resource = _resourceRepository.resolveResource(
       resources,
       config.petId,
@@ -235,6 +261,7 @@ class PetController extends ChangeNotifier {
       config: resolvedConfig,
       resource: resource,
       resources: resources,
+      ignoredResourceReports: discoveryResult.ignoredResources,
     );
   }
 
@@ -272,9 +299,11 @@ class _ResolvedPetResources {
     required this.config,
     required this.resource,
     required this.resources,
+    required this.ignoredResourceReports,
   });
 
   final PetConfig config;
   final PetResource resource;
   final List<PetResource> resources;
+  final List<PetResourceValidationReport> ignoredResourceReports;
 }

@@ -4,6 +4,7 @@ import 'package:desktop_pet/pet/model/pet_resource_option.dart';
 import 'package:desktop_pet/pet/model/pet_runtime_mode.dart';
 import 'package:desktop_pet/pet/model/pet_settings_snapshot.dart';
 import 'package:desktop_pet/resources/model/pet_resource.dart';
+import 'package:desktop_pet/resources/model/pet_resource_discovery_result.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -50,6 +51,14 @@ void main() {
           selected: true,
         ),
       ],
+      ignoredResourceReports: [
+        PetResourceValidationReport(
+          directoryPath: '/tmp/broken',
+          severity: PetResourceValidationSeverity.warning,
+          reason: PetResourceValidationReason.invalidManifest,
+          message: 'pet.json is invalid.',
+        ),
+      ],
       runtimeMode: PetRuntimeMode.error,
       errorMessage: 'load failed',
     );
@@ -60,6 +69,11 @@ void main() {
     expect(decoded.scale, 1.4);
     expect(decoded.alwaysOnTop, isFalse);
     expect(decoded.resourceOptions.single.source, PetResourceSource.bundled);
+    expect(decoded.ignoredResourceReports.single.directoryPath, '/tmp/broken');
+    expect(
+      decoded.ignoredResourceReports.single.reason,
+      PetResourceValidationReason.invalidManifest,
+    );
     expect(decoded.runtimeMode, PetRuntimeMode.error);
     expect(decoded.errorMessage, 'load failed');
   });

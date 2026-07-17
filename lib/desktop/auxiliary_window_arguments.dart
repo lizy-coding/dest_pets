@@ -4,18 +4,13 @@ import 'package:flutter/widgets.dart';
 
 import '../pet/model/pet_settings_snapshot.dart';
 
-enum AuxiliaryWindowType { contextMenu, settingsPanel }
+enum AuxiliaryWindowType { contextMenu }
 
 class AuxiliaryWindowArguments {
   const AuxiliaryWindowArguments.contextMenu({
     required this.anchorGlobalPosition,
     required this.snapshot,
   }) : type = AuxiliaryWindowType.contextMenu;
-
-  const AuxiliaryWindowArguments.settingsPanel()
-    : type = AuxiliaryWindowType.settingsPanel,
-      anchorGlobalPosition = Offset.zero,
-      snapshot = null;
 
   final AuxiliaryWindowType type;
   final Offset anchorGlobalPosition;
@@ -32,8 +27,6 @@ class AuxiliaryWindowArguments {
           json['snapshot'] as Map<String, dynamic>,
         ),
       ),
-      AuxiliaryWindowType.settingsPanel =>
-        const AuxiliaryWindowArguments.settingsPanel(),
     };
   }
 

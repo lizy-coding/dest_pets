@@ -1,8 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
-
 import 'package:desktop_multi_window/desktop_multi_window.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:screen_retriever/screen_retriever.dart';
@@ -11,6 +8,7 @@ import '../pet/model/pet_menu_action.dart';
 import '../pet/model/pet_settings_snapshot.dart';
 import 'auxiliary_window_arguments.dart';
 import 'auxiliary_window_controller.dart';
+import 'platform_capabilities.dart';
 
 typedef CursorScreenPointProvider = Future<Offset> Function();
 typedef AuxiliaryWindowOpener =
@@ -23,11 +21,13 @@ class DesktopAuxiliaryWindowController implements AuxiliaryWindowController {
     @visibleForTesting AuxiliaryWindowOpener? auxiliaryWindowOpener,
     @visibleForTesting ContextMenuCloser? contextMenuCloser,
     @visibleForTesting bool? supportsAuxiliaryWindowsOverride,
+    PlatformCapabilities? capabilities,
   }) : _cursorScreenPointProvider =
            cursorScreenPointProvider ?? screenRetriever.getCursorScreenPoint,
        _auxiliaryWindowOpener = auxiliaryWindowOpener ?? _openAuxiliaryWindow,
        _contextMenuCloser = contextMenuCloser ?? _closeContextMenuWindows,
-       _supportsAuxiliaryWindowsOverride = supportsAuxiliaryWindowsOverride;
+       _supportsAuxiliaryWindowsOverride = supportsAuxiliaryWindowsOverride,
+       _capabilities = capabilities ?? PlatformCapabilities.current();
 
   static const String petMenuActionChannelName = 'desktop_pet/pet_menu_actions';
 
@@ -40,12 +40,13 @@ class DesktopAuxiliaryWindowController implements AuxiliaryWindowController {
   final AuxiliaryWindowOpener _auxiliaryWindowOpener;
   final ContextMenuCloser _contextMenuCloser;
   final bool? _supportsAuxiliaryWindowsOverride;
+  final PlatformCapabilities _capabilities;
   PetMenuActionHandler? _petMenuActionHandler;
   bool _actionChannelInitialized = false;
 
   bool get supportsAuxiliaryWindows =>
       _supportsAuxiliaryWindowsOverride ??
-      !kIsWeb && (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
+      _capabilities.supportsAuxiliaryWindows;
 
   @override
   Future<void> initializePetMenuActionHandler(
