@@ -1,6 +1,11 @@
 #include "flutter_window.h"
 
+#include <dwmapi.h>
 #include <optional>
+
+#include <flutter/method_channel.h>
+#include <flutter/standard_method_codec.h>
+#include <flutter/encodable_value.h>
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -26,6 +31,23 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
+
+  suppress_dwm_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->GetBinaryMessenger(),
+          "desktop_pet/suppress_dwm_border",
+          &flutter::StandardMethodCodec::GetInstance());
+  suppress_dwm_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
+                 result) {
+        if (call.method_name() == "suppress") {
+          Win32Window::SuppressDwmBorder(GetHandle());
+          result->Success();
+        } else {
+          result->NotImplemented();
+        }
+      });
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
