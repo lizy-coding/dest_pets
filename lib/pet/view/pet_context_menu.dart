@@ -5,6 +5,50 @@ import '../model/pet_runtime_mode.dart';
 import '../model/pet_settings_snapshot.dart';
 import '../../resources/model/pet_resource_discovery_result.dart';
 
+class _ContextMenuColors {
+  const _ContextMenuColors(this._isDark);
+
+  final bool _isDark;
+
+  Color get containerBackground =>
+      _isDark ? const Color(0xF7242424) : const Color(0xF7FFFFFF);
+  Color get containerBorder =>
+      _isDark ? const Color(0x1FFFFFFF) : const Color(0x1F111827);
+  Color get containerShadow =>
+      _isDark ? const Color(0x2E000000) : const Color(0x2E111827);
+  Color get titleText =>
+      _isDark ? const Color(0xFFF3F4F6) : const Color(0xFF111827);
+  Color get itemForeground =>
+      _isDark ? const Color(0xFFE5E7EB) : const Color(0xFF1F2937);
+  Color get itemDisabled =>
+      _isDark ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF);
+  Color get trailingText =>
+      _isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+  Color get divider =>
+      _isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB);
+  Color get infoBg =>
+      _isDark ? const Color(0xFF1F2937) : const Color(0xFFF9FAFB);
+  Color get infoBorder =>
+      _isDark ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB);
+  Color get infoText =>
+      _isDark ? const Color(0xFFD1D5DB) : const Color(0xFF4B5563);
+  Color get errorBg =>
+      _isDark ? const Color(0xFF450A0A) : const Color(0xFFFFF1F2);
+  Color get errorBorder =>
+      _isDark ? const Color(0xFF991B1B) : const Color(0xFFFECACA);
+  Color get warningBg =>
+      _isDark ? const Color(0xFF451A03) : const Color(0xFFFFFBEB);
+  Color get warningBorder =>
+      _isDark ? const Color(0xFF92400E) : const Color(0xFFFDE68A);
+  Color get warningTitle =>
+      _isDark ? const Color(0xFFFED7AA) : const Color(0xFF92400E);
+  Color get warningText =>
+      _isDark ? const Color(0xFFFDBA74) : const Color(0xFF78350F);
+
+  static const Color statusError = Color(0xFFB91C1C);
+  static const Color statusSuccess = Color(0xFF047857);
+}
+
 class PetContextMenu extends StatelessWidget {
   const PetContextMenu({
     required this.snapshot,
@@ -22,19 +66,22 @@ class PetContextMenu extends StatelessWidget {
         snapshot.resourceOptions.isNotEmpty;
     final selectedResource = _selectedResourceLabel(snapshot);
     final status = _statusText(snapshot.runtimeMode);
+    final colors = _ContextMenuColors(
+      Theme.of(context).brightness == Brightness.dark,
+    );
 
     return Material(
       color: Colors.transparent,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: const Color(0xF7FFFFFF),
+          color: colors.containerBackground,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0x1F111827)),
-          boxShadow: const [
+          border: Border.all(color: colors.containerBorder),
+          boxShadow: [
             BoxShadow(
               blurRadius: 24,
-              offset: Offset(0, 10),
-              color: Color(0x2E111827),
+              offset: const Offset(0, 10),
+              color: colors.containerShadow,
             ),
           ],
         ),
@@ -55,22 +102,28 @@ class PetContextMenu extends StatelessWidget {
                     title: selectedResource ?? snapshot.petId,
                     status: status,
                     hasError: snapshot.hasError,
+                    colors: colors,
                   ),
                   if (snapshot.hasError) ...[
                     _MenuMessage(
                       text: snapshot.errorMessage ?? 'Pet failed to load.',
                       isError: true,
+                      colors: colors,
                     ),
                     _MenuItem(
                       icon: Icons.refresh,
                       label: 'Recover',
+                      colors: colors,
                       onTap: () => onAction(
                         const PetMenuAction(PetMenuActionType.recoverFromError),
                       ),
                     ),
-                    const _MenuDivider(),
+                    _MenuDivider(colors: colors),
                   ] else ...[
-                    _MenuMessage(text: _resourceSummary(snapshot)),
+                    _MenuMessage(
+                      text: _resourceSummary(snapshot),
+                      colors: colors,
+                    ),
                   ],
                   for (final resource in snapshot.resourceOptions)
                     _MenuItem(
@@ -78,6 +131,7 @@ class PetContextMenu extends StatelessWidget {
                       label: resource.label,
                       trailing: resource.sourceLabel,
                       enabled: canUsePetCommands && !resource.selected,
+                      colors: colors,
                       onTap: () => onAction(
                         PetMenuAction(
                           PetMenuActionType.switchPet,
@@ -86,17 +140,20 @@ class PetContextMenu extends StatelessWidget {
                       ),
                     ),
                   if (snapshot.ignoredResourceReports.isNotEmpty) ...[
-                    const _MenuDivider(),
+                    _MenuDivider(colors: colors),
                     _IgnoredResourceSection(
                       reports: snapshot.ignoredResourceReports,
+                      colors: colors,
                     ),
                   ],
-                  if (snapshot.resourceOptions.isNotEmpty) const _MenuDivider(),
+                  if (snapshot.resourceOptions.isNotEmpty)
+                    _MenuDivider(colors: colors),
                   _MenuItem(
                     icon: Icons.add,
                     label: 'Increase size',
                     trailing: _scaleLabel(snapshot.scale),
                     enabled: canUsePetCommands,
+                    colors: colors,
                     onTap: () => onAction(
                       const PetMenuAction(PetMenuActionType.increaseScale),
                     ),
@@ -105,6 +162,7 @@ class PetContextMenu extends StatelessWidget {
                     icon: Icons.remove,
                     label: 'Decrease size',
                     enabled: canUsePetCommands,
+                    colors: colors,
                     onTap: () => onAction(
                       const PetMenuAction(PetMenuActionType.decreaseScale),
                     ),
@@ -113,17 +171,19 @@ class PetContextMenu extends StatelessWidget {
                     icon: Icons.restart_alt,
                     label: 'Reset size',
                     enabled: canUsePetCommands,
+                    colors: colors,
                     onTap: () => onAction(
                       const PetMenuAction(PetMenuActionType.resetScale),
                     ),
                   ),
-                  const _MenuDivider(),
+                  _MenuDivider(colors: colors),
                   _MenuItem(
                     icon: snapshot.alwaysOnTop
                         ? Icons.push_pin
                         : Icons.push_pin_outlined,
                     label: 'Always on top',
                     trailing: snapshot.alwaysOnTop ? 'On' : 'Off',
+                    colors: colors,
                     onTap: () => onAction(
                       const PetMenuAction(PetMenuActionType.toggleAlwaysOnTop),
                     ),
@@ -131,6 +191,7 @@ class PetContextMenu extends StatelessWidget {
                   _MenuItem(
                     icon: Icons.sync,
                     label: 'Refresh resources',
+                    colors: colors,
                     onTap: () => onAction(
                       const PetMenuAction(PetMenuActionType.refreshResources),
                     ),
@@ -138,14 +199,16 @@ class PetContextMenu extends StatelessWidget {
                   _MenuItem(
                     icon: Icons.restore,
                     label: 'Reset config',
+                    colors: colors,
                     onTap: () => onAction(
                       const PetMenuAction(PetMenuActionType.resetConfig),
                     ),
                   ),
-                  const _MenuDivider(),
+                  _MenuDivider(colors: colors),
                   _MenuItem(
                     icon: Icons.close,
                     label: 'Quit',
+                    colors: colors,
                     onTap: () =>
                         onAction(const PetMenuAction(PetMenuActionType.quit)),
                   ),
@@ -199,17 +262,19 @@ class _MenuHeader extends StatelessWidget {
     required this.title,
     required this.status,
     required this.hasError,
+    required this.colors,
   });
 
   final String title;
   final String status;
   final bool hasError;
+  final _ContextMenuColors colors;
 
   @override
   Widget build(BuildContext context) {
     final statusColor = hasError
-        ? const Color(0xFFB91C1C)
-        : const Color(0xFF047857);
+        ? _ContextMenuColors.statusError
+        : _ContextMenuColors.statusSuccess;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
@@ -236,8 +301,8 @@ class _MenuHeader extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF111827),
+                  style: TextStyle(
+                    color: colors.titleText,
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
@@ -265,6 +330,7 @@ class _MenuItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    required this.colors,
     this.trailing,
     this.enabled = true,
   });
@@ -274,12 +340,11 @@ class _MenuItem extends StatelessWidget {
   final String? trailing;
   final VoidCallback onTap;
   final bool enabled;
+  final _ContextMenuColors colors;
 
   @override
   Widget build(BuildContext context) {
-    final foreground = enabled
-        ? const Color(0xFF1F2937)
-        : const Color(0xFF9CA3AF);
+    final foreground = enabled ? colors.itemForeground : colors.itemDisabled;
 
     return InkWell(
       borderRadius: BorderRadius.circular(6),
@@ -307,10 +372,7 @@ class _MenuItem extends StatelessWidget {
                 child: Text(
                   trailing!,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF6B7280),
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: colors.trailingText, fontSize: 12),
                 ),
               ),
             ],
@@ -322,21 +384,24 @@ class _MenuItem extends StatelessWidget {
 }
 
 class _MenuDivider extends StatelessWidget {
-  const _MenuDivider();
+  const _MenuDivider({required this.colors});
+
+  final _ContextMenuColors colors;
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
-      child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Divider(height: 1, thickness: 1, color: colors.divider),
     );
   }
 }
 
 class _IgnoredResourceSection extends StatelessWidget {
-  const _IgnoredResourceSection({required this.reports});
+  const _IgnoredResourceSection({required this.reports, required this.colors});
 
   final List<PetResourceValidationReport> reports;
+  final _ContextMenuColors colors;
 
   @override
   Widget build(BuildContext context) {
@@ -347,9 +412,9 @@ class _IgnoredResourceSection extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 2),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFBEB),
+          color: colors.warningBg,
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: const Color(0xFFFDE68A)),
+          border: Border.all(color: colors.warningBorder),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
@@ -360,8 +425,8 @@ class _IgnoredResourceSection extends StatelessWidget {
               Text(
                 '${reports.length} ignored resource'
                 '${reports.length == 1 ? '' : 's'}',
-                style: const TextStyle(
-                  color: Color(0xFF92400E),
+                style: TextStyle(
+                  color: colors.warningTitle,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
@@ -375,8 +440,8 @@ class _IgnoredResourceSection extends StatelessWidget {
                     '${_reasonLabel(report.reason)}',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF78350F),
+                    style: TextStyle(
+                      color: colors.warningText,
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
                     ),
@@ -385,8 +450,8 @@ class _IgnoredResourceSection extends StatelessWidget {
               if (remainingCount > 0)
                 Text(
                   '+$remainingCount more',
-                  style: const TextStyle(
-                    color: Color(0xFF92400E),
+                  style: TextStyle(
+                    color: colors.warningTitle,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
@@ -423,20 +488,23 @@ String _reasonLabel(PetResourceValidationReason reason) {
 }
 
 class _MenuMessage extends StatelessWidget {
-  const _MenuMessage({required this.text, this.isError = false});
+  const _MenuMessage({
+    required this.text,
+    required this.colors,
+    this.isError = false,
+  });
 
   final String text;
   final bool isError;
+  final _ContextMenuColors colors;
 
   @override
   Widget build(BuildContext context) {
     final foreground = isError
-        ? const Color(0xFFB91C1C)
-        : const Color(0xFF4B5563);
-    final background = isError
-        ? const Color(0xFFFFF1F2)
-        : const Color(0xFFF9FAFB);
-    final border = isError ? const Color(0xFFFECACA) : const Color(0xFFE5E7EB);
+        ? _ContextMenuColors.statusError
+        : colors.infoText;
+    final background = isError ? colors.errorBg : colors.infoBg;
+    final border = isError ? colors.errorBorder : colors.infoBorder;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
