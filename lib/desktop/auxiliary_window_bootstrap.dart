@@ -29,6 +29,8 @@ class AuxiliaryWindowBootstrap {
     _screenMargin,
   );
 
+  static const _dwmChannel = MethodChannel('desktop_pet/suppress_dwm_border');
+
   final WindowController currentWindowController;
   final PlatformCapabilities _capabilities;
   final AllDisplaysProvider _allDisplaysProvider;
@@ -72,6 +74,11 @@ class AuxiliaryWindowBootstrap {
     await windowManager.setMinimizable(false);
     await windowManager.setHasShadow(false);
     await windowManager.setBackgroundColor(Colors.transparent);
+    try {
+      await _dwmChannel.invokeMethod<void>('suppress');
+    } on MissingPluginException {
+      // DWM suppression handled natively at window creation.
+    }
     await windowManager.setPosition(
       await contextMenuPosition(arguments.anchorGlobalPosition),
     );

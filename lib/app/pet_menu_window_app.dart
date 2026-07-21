@@ -40,9 +40,16 @@ class _PetMenuWindowAppState extends State<PetMenuWindowApp>
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       color: Colors.transparent,
+      themeMode: ThemeMode.system,
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,
+        scaffoldBackgroundColor: Colors.transparent,
+        canvasColor: Colors.transparent,
+      ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
         scaffoldBackgroundColor: Colors.transparent,
         canvasColor: Colors.transparent,
       ),
